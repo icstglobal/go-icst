@@ -1,0 +1,4 @@
+package: github.com/icstglobal/go-icst
+import:
+- package: github.com/ethereum/go-ethereum
+  version: 1.8.x
