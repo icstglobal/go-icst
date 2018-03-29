@@ -1,0 +1,8 @@
+github.com/ethereum/go-ethereum/tests/
+github.com/ethereum/go-ethereum/dashboard/
+github.com/ethereum/go-ethereum/.github/
+github.com/ethereum/go-ethereum/vendor/
+github.com/ethereum/go-ethereum/build/
+github.com/ethereum/go-ethereum/cmd/
+*/**/testdata/
+*_test.go
