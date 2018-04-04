@@ -28,9 +28,11 @@ func PubContent(owner *user.User, c *content.Content) error {
 		// return error.Error("hash doest not match")
 	}
 
+
 	tx := transaction.NewContent(owner, c.Data)
 	//TODO: sign the trans
 	//TODO: send to chain
+
 	return nil
 }
 
