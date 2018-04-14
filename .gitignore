@@ -16,3 +16,6 @@ glide.lock
 
 # VSCode file
 .vscode
+
+# Mac os
+.DS_Store
