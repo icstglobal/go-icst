@@ -9,32 +9,20 @@ import (
 
 // ConsumeContract is the contract for consuming a content directly
 type ConsumeContract struct {
-	ctt       *content.Content
-	platform  *user.User
-	publisher *user.User
-	fee       uint32
-	ratio     uint8  // ratio to split the fee
-	addr      []byte // the address of the smart contract after being deployed to the chain
+	Ctt      *content.Content
+	Platform *user.User
+	Owner    *user.User
+	Price    uint32
+	Ratio    uint8  // ratio to split the fee
+	Addr     []byte // the address of the smart contract after being deployed to the chain
 }
 
 // NewConsumeContract creates a new contract for content consuming. It can never be changed.
-func NewConsumeContract(c *content.Content, platform *user.User, publisher *user.User,
+func NewConsumeContract(c *content.Content, platform *user.User, owner *user.User,
 	fee uint32, ratio uint8) *ConsumeContract {
-	return &ConsumeContract{ctt: c, platform: platform, publisher: publisher,
-		fee: fee, ratio: ratio,
+	return &ConsumeContract{Ctt: c, Platform: platform, Owner: owner,
+		Price: fee, Ratio: ratio,
 	}
-}
-
-// Addr returns a copy of the contract's address.
-// nil if the contract has never been deployed.
-func (cc *ConsumeContract) Addr() []byte {
-	if cc.addr == nil {
-		return nil
-	}
-	// make a copy so that the address won't be modified by accident
-	addrCopy := make([]byte, len(cc.addr))
-	copy(cc.addr, addrCopy)
-	return addrCopy
 }
 
 //Exec a contract and the user pay the fee
@@ -47,11 +35,11 @@ func (cc *ConsumeContract) Exec(u *user.User) error {
 // Deploy the contract to underlying chain.
 func (cc *ConsumeContract) Deploy() error {
 	//TODO:do more contract validation
-	if cc.ctt == nil || cc.platform == nil || cc.publisher == nil {
-		return errors.New("content, platform or publisher can not be empty")
+	if cc.Ctt == nil || cc.Platform == nil || cc.Owner == nil {
+		return errors.New("content, platform or owner can not be empty")
 	}
 
-	if cc.fee > 0 && cc.ratio == 0 {
+	if cc.Price > 0 && cc.Ratio == 0 {
 		return errors.New("ratio should be set when fee is not zero")
 	}
 	//TODO:call chain API

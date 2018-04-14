@@ -4,14 +4,14 @@ contract ConsumeContent {
     address public publisher;
     address public platform;
     // price of the content
-    uint public price; 
+    uint32 public price; 
     // ratio to split the fee. 
     uint8 public ratio; 
     // total times of conent being consumed
     uint public count;
     mapping (address=>uint) deposits;
     
-    function ConsumeContent(address pPublisher, address pPlatform, uint pPrice, uint8 pRatio) public{
+    function ConsumeContent(address pPublisher, address pPlatform, uint32 pPrice, uint8 pRatio) public{
         publisher = pPublisher;
         platform = pPlatform;
         price = pPrice;

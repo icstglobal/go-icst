@@ -14,13 +14,13 @@ import (
 )
 
 // ConsumeContentABI is the input ABI used to generate the binding from.
-const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint256\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint32\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
 
 // ConsumeContentBin is the compiled bytecode used for deploying new contracts.
-const ConsumeContentBin = `0x6060604052341561000f57600080fd5b6040516080806103578339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805496909716951694909417909455506002556003805460ff90921660ff19909216919091179055506102c7806100906000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146101055780638c72c54e1461012e578063a035b1fe14610141575b600080fd5b341561009257600080fd5b61009a610154565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf61015a565b005b6100bf6101e5565b34156100d457600080fd5b6100dc610254565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f35b341561011057600080fd5b610118610270565b60405160ff909116815260200160405180910390f35b341561013957600080fd5b6100dc610279565b341561014c57600080fd5b61009a610295565b60045481565b73ffffffffffffffffffffffffffffffffffffffff331660009081526005602052604081205481901161018c57600080fd5b5073ffffffffffffffffffffffffffffffffffffffff3316600081815260056020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101e257600080fd5b50565b60025460009034146101f657600080fd5b60048054600101905560035460649060ff1634026000805473ffffffffffffffffffffffffffffffffffffffff9081168252600560205260408083208054959094049485019093556001541681522080543492909203909101905550565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b60035460ff1681565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b600254815600a165627a7a7230582014e05d94a742d0200d844851fc85f20026c7e927df0aa78f32c120c5239df73a0029`
+const ConsumeContentBin = `0x6060604052341561000f57600080fd5b6040516080806104338339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805460ff90931678010000000000000000000000000000000000000000000000000260c060020a60ff021963ffffffff909716740100000000000000000000000000000000000000000260a060020a63ffffffff0219989099169390921692909217959095169590951792909216929092179092555050610355806100de6000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146101055780638c72c54e1461012e578063a035b1fe14610141575b600080fd5b341561009257600080fd5b61009a61016d565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf610173565b005b6100bf6101fe565b34156100d457600080fd5b6100dc6102a8565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f35b341561011057600080fd5b6101186102c4565b60405160ff909116815260200160405180910390f35b341561013957600080fd5b6100dc6102e9565b341561014c57600080fd5b610154610305565b60405163ffffffff909116815260200160405180910390f35b60025481565b73ffffffffffffffffffffffffffffffffffffffff33166000908152600360205260408120548190116101a557600080fd5b5073ffffffffffffffffffffffffffffffffffffffff3316600081815260036020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101fb57600080fd5b50565b60015460009074010000000000000000000000000000000000000000900463ffffffff16341461022d57600080fd5b600280546001908101909155546064907801000000000000000000000000000000000000000000000000900460ff1634026000805473ffffffffffffffffffffffffffffffffffffffff9081168252600360205260408083208054959094049485019093556001541681522080543492909203909101905550565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b6001547801000000000000000000000000000000000000000000000000900460ff1681565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60015474010000000000000000000000000000000000000000900463ffffffff16815600a165627a7a72305820a7dc09e862d3c4dcca2b37099b128529eb6eb6e498860210bc444a1505ca46e00029`
 
 // DeployConsumeContent deploys a new Ethereum contract, binding an instance of ConsumeContent to it.
-func DeployConsumeContent(auth *bind.TransactOpts, backend bind.ContractBackend, pPublisher common.Address, pPlatform common.Address, pPrice *big.Int, pRatio uint8) (common.Address, *types.Transaction, *ConsumeContent, error) {
+func DeployConsumeContent(auth *bind.TransactOpts, backend bind.ContractBackend, pPublisher common.Address, pPlatform common.Address, pPrice uint32, pRatio uint8) (common.Address, *types.Transaction, *ConsumeContent, error) {
 	parsed, err := abi.JSON(strings.NewReader(ConsumeContentABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -228,10 +228,10 @@ func (_ConsumeContent *ConsumeContentCallerSession) Platform() (common.Address, 
 
 // Price is a free data retrieval call binding the contract method 0xa035b1fe.
 //
-// Solidity: function price() constant returns(uint256)
-func (_ConsumeContent *ConsumeContentCaller) Price(opts *bind.CallOpts) (*big.Int, error) {
+// Solidity: function price() constant returns(uint32)
+func (_ConsumeContent *ConsumeContentCaller) Price(opts *bind.CallOpts) (uint32, error) {
 	var (
-		ret0 = new(*big.Int)
+		ret0 = new(uint32)
 	)
 	out := ret0
 	err := _ConsumeContent.contract.Call(opts, out, "price")
@@ -240,15 +240,15 @@ func (_ConsumeContent *ConsumeContentCaller) Price(opts *bind.CallOpts) (*big.In
 
 // Price is a free data retrieval call binding the contract method 0xa035b1fe.
 //
-// Solidity: function price() constant returns(uint256)
-func (_ConsumeContent *ConsumeContentSession) Price() (*big.Int, error) {
+// Solidity: function price() constant returns(uint32)
+func (_ConsumeContent *ConsumeContentSession) Price() (uint32, error) {
 	return _ConsumeContent.Contract.Price(&_ConsumeContent.CallOpts)
 }
 
 // Price is a free data retrieval call binding the contract method 0xa035b1fe.
 //
-// Solidity: function price() constant returns(uint256)
-func (_ConsumeContent *ConsumeContentCallerSession) Price() (*big.Int, error) {
+// Solidity: function price() constant returns(uint32)
+func (_ConsumeContent *ConsumeContentCallerSession) Price() (uint32, error) {
 	return _ConsumeContent.Contract.Price(&_ConsumeContent.CallOpts)
 }
 

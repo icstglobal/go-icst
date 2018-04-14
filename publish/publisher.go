@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
+	"log"
 
+	"github.com/icstglobal/go-icst/chain"
 	"github.com/icstglobal/go-icst/content"
+	"github.com/icstglobal/go-icst/contract"
 	"github.com/icstglobal/go-icst/skill"
-	"github.com/icstglobal/go-icst/transaction"
 	"github.com/icstglobal/go-icst/user"
 )
 
@@ -21,19 +23,24 @@ type SkillPublisher interface {
 	Pub(s *skill.Skill)
 }
 
-func PubContent(owner *user.User, c *content.Content) error {
+//PubContent upload content hash to block chain and returns the address of smart contract
+func PubContent(owner *user.User, c *content.Content, fee uint32, platform *user.User, ratio uint8) ([]byte, error) {
 	hash := hash(c.Data)
 	if bytes.Equal(hash, c.Hash) {
-		return errors.New("hash does not match")
+		return nil, errors.New("hash does not match")
 		// return error.Error("hash doest not match")
 	}
 
+	ct := contract.NewConsumeContract(c, platform, owner, fee, ratio)
+	//TODO:determine chain type
+	chain, err := chain.NewChain(chain.Ethereum)
+	ctAddr, err := chain.DeployContract(ct)
+	if err != nil {
+		log.Printf("faild to publish content:%v, error:%v\n", c, err)
+	}
 
-	tx := transaction.NewContent(owner, c.Data)
-	//TODO: sign the trans
-	//TODO: send to chain
-
-	return nil
+	//TODO:save metadata of content and smart contract
+	return ctAddr, nil
 }
 
 func hash(data []byte) []byte {
