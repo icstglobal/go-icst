@@ -10,12 +10,11 @@ import (
 	"github.com/icstglobal/go-icst/content"
 	"github.com/icstglobal/go-icst/contract"
 	"github.com/icstglobal/go-icst/skill"
-	"github.com/icstglobal/go-icst/user"
 )
 
 // ContentPublisher is interface for user to publish a content
-type ContentPublisher interface {
-	Pub(c *content.Content)
+type ContentPublisher struct {
+	chain chain.Chain
 }
 
 // SkillPublisher is interface for user to publish a skill as a service
@@ -23,18 +22,20 @@ type SkillPublisher interface {
 	Pub(s *skill.Skill)
 }
 
+func NewContentPublisher(chain chain.Chain) *ContentPublisher {
+	return &ContentPublisher{chain: chain}
+}
+
 //PubContent upload content hash to block chain and returns the address of smart contract
-func PubContent(owner *user.User, c *content.Content, fee uint32, platform *user.User, ratio uint8) ([]byte, error) {
+func (p *ContentPublisher) PubContent(c *content.Content, opts contract.Options) ([]byte, error) {
 	hash := hash(c.Data)
 	if bytes.Equal(hash, c.Hash) {
 		return nil, errors.New("hash does not match")
 		// return error.Error("hash doest not match")
 	}
 
-	ct := contract.NewConsumeContract(c, platform, owner, fee, ratio)
-	//TODO:determine chain type
-	chain, err := chain.NewChain(chain.Ethereum)
-	ctAddr, err := chain.DeployContract(ct)
+	ct := contract.NewConsumeContract(c, opts.Platform, opts.Price, opts.Ratio)
+	ctAddr, err := p.chain.DeployContract(ct)
 	if err != nil {
 		log.Printf("faild to publish content:%v, error:%v\n", c, err)
 	}

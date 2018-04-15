@@ -18,9 +18,9 @@ type ConsumeContract struct {
 }
 
 // NewConsumeContract creates a new contract for content consuming. It can never be changed.
-func NewConsumeContract(c *content.Content, platform *user.User, owner *user.User,
+func NewConsumeContract(c *content.Content, platform *user.User,
 	fee uint32, ratio uint8) *ConsumeContract {
-	return &ConsumeContract{Ctt: c, Platform: platform, Owner: owner,
+	return &ConsumeContract{Ctt: c, Platform: platform, Owner: c.Owner,
 		Price: fee, Ratio: ratio,
 	}
 }
