@@ -38,6 +38,7 @@ func (p *ContentPublisher) PubContent(c *content.Content, opts contract.Options)
 	ctAddr, err := p.chain.DeployContract(ct)
 	if err != nil {
 		log.Printf("faild to publish content:%v, error:%v\n", c, err)
+		return nil, err
 	}
 
 	//TODO:save metadata of content and smart contract

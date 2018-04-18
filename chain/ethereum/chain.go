@@ -1,7 +1,6 @@
 package ethereum
 
 import (
-	"errors"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,9 +18,10 @@ type ChainEthereum struct {
 func (c *ChainEthereum) GetContract(addr []byte) (interface{}, error) {
 	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.Backend)
 	if err != nil {
-		log.Printf("faild to find smart contract, err:%v", err)
+		log.Printf("faild to find smart contract, err:%v\n", err)
+		return nil, err
 	}
-	return ct, errors.New("not implemented yet")
+	return ct, nil
 }
 
 // DeployContract method convert the domain contract to Ehtereum smart contract and deploy it.
@@ -30,11 +30,14 @@ func (c *ChainEthereum) DeployContract(contract *contract.ConsumeContract) (cont
 	opts := bind.NewKeyedTransactor(contract.Owner.PrivateKey)
 	ownerAddr := ethcrypto.PubkeyToAddress(contract.Owner.PrivateKey.PublicKey)
 	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
-	if add, _, _, err := DeployConsumeContent(opts, c.Backend, ownerAddr, platformAddr, contract.Price, contract.Ratio); err != nil {
-		// update contract address after deployed
-		contract.Addr = add.Bytes()
-		return nil, nil
+	add, _, _, err := DeployConsumeContent(opts, c.Backend, ownerAddr, platformAddr, contract.Price, contract.Ratio)
+	if err != nil {
+		log.Printf("failed to deploy contract:%v\n", err)
+		return nil, err
 	}
 
-	return nil, err
+	log.Printf("contract deployed to address:%+v\n", add.Hex())
+	// update contract address after deployed
+	contract.Addr = add.Bytes()
+	return contract.Addr, err
 }
