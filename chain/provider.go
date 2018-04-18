@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/icstglobal/go-icst/chain/ethereum"
 	"github.com/icstglobal/go-icst/contract"
 )
@@ -37,10 +35,4 @@ func NewChain(t ChainType) (Chain, error) {
 		msg := fmt.Sprintf("unsuported chain type:%v", t)
 		return nil, errors.New(msg)
 	}
-}
-
-// SimChain creates a local simulated blockchain, for test only
-func SimChain() (Chain, error) {
-	alloc := make(core.GenesisAlloc)
-	return &ethereum.ChainEthereum{Backend: backends.NewSimulatedBackend(alloc)}, nil
 }
