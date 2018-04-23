@@ -3,6 +3,7 @@ package metadata
 import (
 	"crypto"
 	"encoding/hex"
+	"encoding/json"
 	"time"
 
 	"github.com/icstglobal/go-icst/content"
@@ -29,4 +30,21 @@ func FromContent(c *content.Content) ContentMetadata {
 		Date:  time.Now().Unix(),
 		Owner: UserID{c.Owner.PrivateKey.Public(), "ecdsa"},
 	}
+}
+
+//ContentMetaFromJSON deserialize content metadata from json string
+func ContentMetaFromJSON(metaString string) (meta ContentMetadata, err error) {
+	err = json.Unmarshal([]byte(metaString), meta)
+	return
+}
+
+//ContentMetaToJSON serialize content metadata to json string
+func ContentMetaToJSON(meta ContentMetadata) (string, error) {
+	var buf []byte
+	var err error
+	if buf, err = json.Marshal(meta); err != nil {
+		return "", err
+	}
+
+	return string(buf), nil
 }
