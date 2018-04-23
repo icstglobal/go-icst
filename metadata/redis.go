@@ -12,7 +12,7 @@ type DBRedis struct {
 	conn redis.Conn
 }
 
-//NewDBRedis create a new DBRedis instance.
+//NewDBRedis create a new DBRedis instance and connect to it.
 //Pass nil as url to connect to local redis server running on default.
 func NewDBRedis(url *string) (*DBRedis, error) {
 	var conn redis.Conn
