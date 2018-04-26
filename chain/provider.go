@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -11,6 +12,7 @@ import (
 type Chain interface {
 	DeployContract(contract *contract.ConsumeContract) (contractAddr []byte, err error)
 	GetContract(addr []byte) (interface{}, error)
+	DeploySkillContract(ctx context.Context, contract *contract.SkillContract) (contractAddr []byte, err error)
 }
 
 // ChainType defines the type of underlying blockchain
