@@ -17,6 +17,7 @@ contract ConsumeSkill{
     enum State {Init, InProgress, Complete, Aborted }
 
     event StateChange(address actor, State from, State to);
+    event ConsumeSkillContractDeployed();
     
     modifier publisherOnly(){
         require(msg.sender == publisher);
@@ -42,6 +43,8 @@ contract ConsumeSkill{
         price = pPrice;
         ratio = pRatio;
         state = State.Init;
+
+        emit ConsumeSkillContractDeployed();
     }
 
     // user start consuming the skill service and pay for it

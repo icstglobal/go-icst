@@ -113,7 +113,7 @@ func ethChain(url string) (chain.Chain, error) {
 		return nil, err
 	}
 
-	return &ethereum.ChainEthereum{Backend: client}, nil
+	return ethereum.NewChainEthereum(client), nil
 }
 
 func initAccounts() {

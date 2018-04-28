@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/icstglobal/go-icst/skill"
-
 	"github.com/icstglobal/go-icst/content"
 )
 
@@ -58,8 +56,4 @@ type SkillMetadata struct {
 	Publisher UserID `json:"publisher,required"`
 	Platform  UserID `json:"platform,required"`
 	Consumer  UserID `json:"consumer,required"`
-}
-
-func FromSkill(s *skill.Skill) {
-
 }

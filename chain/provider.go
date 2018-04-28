@@ -2,17 +2,12 @@ package chain
 
 import (
 	"context"
-	"errors"
-	"fmt"
-
-	"github.com/icstglobal/go-icst/chain/ethereum"
-	"github.com/icstglobal/go-icst/contract"
+	"reflect"
 )
 
 type Chain interface {
-	DeployContract(contract *contract.ConsumeContract) (contractAddr []byte, err error)
-	GetContract(addr []byte) (interface{}, error)
-	DeploySkillContract(ctx context.Context, contract *contract.SkillContract) (contractAddr []byte, err error)
+	GetContract(addr []byte, t reflect.Type) (interface{}, error)
+	DeployContract(ctx context.Context, icontract interface{}) (contractAddr []byte, err error)
 }
 
 // ChainType defines the type of underlying blockchain
@@ -24,17 +19,3 @@ const (
 	//EOS blockchain
 	EOS ChainType = 1
 )
-
-//NewChain inits a chain instance by chain type
-func NewChain(t ChainType) (Chain, error) {
-	switch t {
-	case Ethereum:
-		chain := &ethereum.ChainEthereum{}
-		return chain, nil
-	case EOS:
-		return nil, nil
-	default:
-		msg := fmt.Sprintf("unsuported chain type:%v", t)
-		return nil, errors.New(msg)
-	}
-}

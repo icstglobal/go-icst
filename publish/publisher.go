@@ -61,13 +61,11 @@ func NewSkillPublisher(chain chain.Chain, store metadata.Store) *SkillPublisher 
 
 func (p *SkillPublisher) Pub(ctx context.Context, s *skill.Skill, opts *contract.Options, consumer *user.User) (addr []byte, err error) {
 	ct := contract.NewSkillContract(s, opts, consumer)
-	addr, err = p.Chain.DeploySkillContract(ctx, ct)
+	addr, err = p.Chain.DeployContract(ctx, ct)
 	if err != nil {
 		log.Println("failed to publish skill contract, ", err)
 		return nil, err
 	}
-
-	p.store.Save(ct.Hash, metadata.FromSkill(ct))
 	//TODO: save metadata
 	return
 }

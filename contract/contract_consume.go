@@ -15,6 +15,7 @@ type ConsumeContract struct {
 	Price    uint32
 	Ratio    uint8  // ratio to split the fee
 	Addr     []byte // the address of the smart contract after being deployed to the chain
+	Nonce    uint64
 }
 
 // NewConsumeContract creates a new contract for content consuming. It can never be changed.

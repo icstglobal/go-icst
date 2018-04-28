@@ -3,7 +3,14 @@ package ethereum
 import (
 	"context"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"log"
+	"reflect"
+	"time"
+
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 
@@ -14,14 +21,26 @@ import (
 	"github.com/icstglobal/go-icst/contract"
 )
 
+//ContractDeploymentTimeout  is the default timeout for contract deployment
+const ContractDeploymentTimeout = 20 * time.Second
+
+// ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
-	Backend *ethclient.Client
-	// Client ethclient.Client
+	contractBackend bind.ContractBackend
+	deployBackend   bind.DeployBackend
 }
 
-// GetContract gets smart contract from Ethereum chain with its address.
-func (c *ChainEthereum) GetContract(addr []byte) (interface{}, error) {
-	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.Backend)
+// NewChainEthereum creates a new Ethereum chain object
+func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
+	return &ChainEthereum{
+		contractBackend: client,
+		deployBackend:   client,
+	}
+}
+
+// GetContentContract gets content contract from Ethereum chain with its address.
+func (c *ChainEthereum) getContentContract(addr []byte) (*ConsumeContent, error) {
+	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.contractBackend)
 	if err != nil {
 		log.Printf("faild to find smart contract, err:%v\n", err)
 		return nil, err
@@ -29,50 +48,90 @@ func (c *ChainEthereum) GetContract(addr []byte) (interface{}, error) {
 	return ct, nil
 }
 
-// DeployContract method convert the domain contract to Ehtereum smart contract and deploy it.
-// The address of the deployed smart contract will be returned if success.
-func (c *ChainEthereum) DeployContract(contract *contract.ConsumeContract) (contractAddr []byte, err error) {
-	opts := bind.NewKeyedTransactor(contract.Owner.PrivateKey)
-	ownerAddr := ethcrypto.PubkeyToAddress(contract.Owner.PrivateKey.PublicKey)
-	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
-	add, _, _, err := DeployConsumeContent(opts, c.Backend, ownerAddr, platformAddr, contract.Price, contract.Ratio)
+// GetSkillContract gets skill contract from Ethereum chain with its address.
+func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
+	ct, err := NewConsumeSkill(common.BytesToAddress(addr), c.contractBackend)
 	if err != nil {
-		log.Printf("failed to deploy contract:%v\n", err)
 		return nil, err
 	}
 
-	log.Printf("contract deployed to address:%+v\n", add.Hex())
+	return ct, nil
+}
+
+// GetContract gets smart contract from Ethereum chain with its address.
+func (c *ChainEthereum) GetContract(addr []byte, t reflect.Type) (interface{}, error) {
+	switch t {
+	case reflect.TypeOf((*contract.ConsumeContract)(nil)):
+		return c.getContentContract(addr)
+	case reflect.TypeOf((*contract.SkillContract)(nil)):
+		return c.getSkillContract(addr)
+	default:
+		return nil, fmt.Errorf("unknown contract type:%v", t.Name())
+	}
+}
+
+// DeployContract method convert the domain contract to Ehtereum smart contract and deploy it.
+// The address of the deployed smart contract will be returned if success.
+func (c *ChainEthereum) DeployContract(ctx context.Context, icontract interface{}) (contractAddr []byte, err error) {
+	switch icontract.(type) {
+	case *contract.ConsumeContract:
+		return c.deployContentContract(context.TODO(), icontract.(*contract.ConsumeContract))
+	case *contract.SkillContract:
+		return c.deploySkillContract(ctx, icontract.(*contract.SkillContract))
+	default:
+		return nil, errors.New("unsupported contract type")
+	}
+}
+
+func (c *ChainEthereum) deployContentContract(ctx context.Context, contract *contract.ConsumeContract) (contractAddr []byte, err error) {
+	opts := bind.NewKeyedTransactor(contract.Owner.PrivateKey)
+	ownerAddr := ethcrypto.PubkeyToAddress(contract.Owner.PrivateKey.PublicKey)
+	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
+	addr, tx, _, err := DeployConsumeContent(opts, c.contractBackend, ownerAddr, platformAddr, contract.Price, contract.Ratio)
+	if err != nil {
+		return nil, err
+	}
+
+	if addr, err = c.waitContractDeployed(ctx, tx); err == bind.ErrNoCodeAfterDeploy {
+		return nil, err
+	}
 	// update contract address after deployed
-	contract.Addr = add.Bytes()
+	contract.Addr = addr.Bytes()
+	contract.Nonce = tx.Nonce()
 	return contract.Addr, err
 }
 
 //DeploySkillContract send the contract to block chain and wait for it to be mined.
 //If the address returned is not nil, then it can be used even there is an error returned, but the contract may not yet be mined.
-func (c *ChainEthereum) DeploySkillContract(ctx context.Context, contract *contract.SkillContract) (contractAddr []byte, err error) {
-	opts := bind.NewKeyedTransactor(contract.Producuer.PrivateKey)
-	prodAddr := ethcrypto.PubkeyToAddress(contract.Producuer.PrivateKey.PublicKey)
+func (c *ChainEthereum) deploySkillContract(ctx context.Context, contract *contract.SkillContract) (contractAddr []byte, err error) {
+	opts := bind.NewKeyedTransactor(contract.Producer.PrivateKey)
+	prodAddr := ethcrypto.PubkeyToAddress(contract.Producer.PrivateKey.PublicKey)
 	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
 	consAddr := ethcrypto.PubkeyToAddress(contract.Consumer.PrivateKey.PublicKey)
 	hash := hex.EncodeToString(contract.Skill.Hash)
-	addr, _, _, err := DeployConsumeSkill(opts, c.Backend, hash, prodAddr, platformAddr, consAddr, contract.Price, contract.Ratio)
+	addr, tx, _, err := DeployConsumeSkill(opts, c.contractBackend, hash, prodAddr, platformAddr, consAddr, contract.Price, contract.Ratio)
 	if err != nil {
-		log.Printf("failed to deploy contract:%v\n", err)
 		return nil, err
 	}
 
-	if err != nil {
-		if err == bind.ErrNoCodeAfterDeploy {
-			log.Println(err)
-			return nil, err
-		}
+	if addr, err = c.waitContractDeployed(ctx, tx); err == bind.ErrNoCodeAfterDeploy {
+		return nil, err
+	}
+	// update contract address after deployed
+	contract.Addr = addr.Bytes()
+	contract.Nonce = tx.Nonce()
+	return contract.Addr, err
+}
 
-		log.Printf("waiting of deployment confirmation canceled:%v\n", err)
-		//address of the contract can be used, as it has been sent to the chain
-		return addr.Bytes(), err
+func (c *ChainEthereum) waitContractDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
+	if ctx == nil {
+		ctx, _ = context.WithTimeout(context.Background(), ContractDeploymentTimeout)
 	}
 
-	// update contract address after deployed
-	// contract.Addr = addr.Bytes()
-	return contract.Addr, err
+	return bind.WaitDeployed(ctx, c.deployBackend, tx)
+}
+
+func (c *ChainEthereum) WatchEvent(ctx context.Context, contractDeployed *ConsumeSkill, stateChan chan<- *ConsumeSkillStateChange) (event.Subscription, error) {
+	watchOpts := &bind.WatchOpts{Start: nil, Context: ctx} // start from the latest block
+	return contractDeployed.WatchStateChange(watchOpts, stateChan)
 }
