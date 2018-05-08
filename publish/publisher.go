@@ -33,7 +33,7 @@ func (p *ContentPublisher) PubContent(c *content.Content, opts contract.Options)
 	}
 
 	ct := contract.NewConsumeContract(c, opts.Platform, opts.Price, opts.Ratio)
-	ctAddr, err := p.chain.DeployContract(ct)
+	ctAddr, err := p.chain.DeployContract(context.Background(), ct)
 	if err != nil {
 		log.Printf("faild to publish content:%v, error:%v\n", c, err)
 		return nil, err
