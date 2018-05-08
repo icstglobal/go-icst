@@ -3,6 +3,8 @@ package chain
 import (
 	"context"
 	"reflect"
+
+	"github.com/icstglobal/go-icst/chain/ethereum"
 )
 
 type Chain interface {
@@ -19,3 +21,7 @@ const (
 	//EOS blockchain
 	EOS ChainType = 1
 )
+
+func DialEthereum(url string) (Chain, error) {
+	return ethereum.DialEthereum(url)
+}

@@ -30,12 +30,22 @@ type ChainEthereum struct {
 	deployBackend   bind.DeployBackend
 }
 
-// NewChainEthereum creates a new Ethereum chain object
+// NewChainEthereum creates a new Ethereum chain object with an existing ethclient
 func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
 		contractBackend: client,
 		deployBackend:   client,
 	}
+}
+
+//DialEthereum creates a new Ethereum chain object by dialing to the given url
+func DialEthereum(url string) (*ChainEthereum, error) {
+	client, err := ethclient.Dial(url)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewChainEthereum(client), nil
 }
 
 // GetContentContract gets content contract from Ethereum chain with its address.
