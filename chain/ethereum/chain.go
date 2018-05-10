@@ -2,11 +2,10 @@ package ethereum
 
 import (
 	"context"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"log"
+	"math/big"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -16,13 +15,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/icstglobal/go-icst/contract"
+	"github.com/icstglobal/go-icst/transaction"
 )
 
-//ContractDeploymentTimeout  is the default timeout for contract deployment
-const ContractDeploymentTimeout = 20 * time.Second
+//contractDeploymentTimeout  is the default timeout for contract deployment
+const contractDeploymentTimeout = 20 * time.Second
+const contractCreationGasLimit uint64 = 1000000
 
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
@@ -48,17 +49,148 @@ func DialEthereum(url string) (*ChainEthereum, error) {
 	return NewChainEthereum(client), nil
 }
 
-// GetContentContract gets content contract from Ethereum chain with its address.
+// GetContract gets smart contract from Ethereum chain with its address.
+func (c *ChainEthereum) GetContract(addr []byte, contractType string) (interface{}, error) {
+	switch contractType {
+	case "Content":
+		return c.getContentContract(addr)
+	case "Skill":
+		return c.getSkillContract(addr)
+	default:
+		return nil, fmt.Errorf("unknown contract type:%v", contractType)
+	}
+}
+
+//NewContract makes a new contract creation transaction.
+//The transaction is not sent out yet and must be confirmed later by sender.
+func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.ContractTransaction, error) {
+	var parsed abi.ABI
+	var err error
+	switch contractType {
+	case "Content":
+		parsed, err = abi.JSON(strings.NewReader(ConsumeContentABI))
+		break
+	case "Skill":
+		parsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI))
+		break
+	default:
+		err = fmt.Errorf("unknown contract type:%v", contractType)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return c.createContract(ctx, from, parsed, contractData)
+}
+
+func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi.ABI, contractData interface{}) (*transaction.ContractTransaction, error) {
+	params, err := extractAbiParams(abi.Constructor, contractData)
+	if err != nil {
+		return nil, err
+	}
+	input, err := abi.Pack("", params...)
+	if err != nil {
+		return nil, err
+	}
+	bytecode := common.FromHex(ConsumeContentBin)
+	bytecode = append(bytecode, input...)
+	fromAddr := common.BytesToAddress(from)
+	var nonce uint64
+	if nonce, err = c.contractBackend.PendingNonceAt(ctx, fromAddr); err != nil {
+		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
+	}
+	value := new(big.Int)
+	var gasPrice *big.Int
+	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+		return nil, fmt.Errorf("failed to suggest gas price: %v", err)
+	}
+
+	//TODO: gasLimit estimated does not enough for contract creation.
+	// var gasLimit uint64
+	// msg := ethereum.CallMsg{From: fromAddr, To: nil, Value: value, Data: input}
+	// gasLimit, err = c.contractBackend.EstimateGas(ctx, msg)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
+	// }
+
+	//use a hardcoded gasLimit temporarily
+	rawTx := types.NewContractCreation(nonce, value, contractCreationGasLimit /*asLimit*/, gasPrice, bytecode)
+
+	ct := transaction.NewContractTransaction(rawTx, from)
+	ct.ContractAddr = ethcrypto.CreateAddress(fromAddr, rawTx.Nonce()).Bytes()
+	ct.TxHashFunc = func(rawTx interface{}) []byte {
+		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
+	}
+	ct.SignFunc = func(sig []byte) error {
+		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
+		if err != nil {
+			return fmt.Errorf("failed to update transaction signature:%v", err)
+		}
+
+		ct.SetRawTx(cpyTx)
+		return nil
+	}
+
+	return ct, nil
+}
+
+//ConfirmTrans update the raw transaction with given signature and send it to the underlying block chain.
+func (c *ChainEthereum) ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error {
+
+	if err := trans.WithSign(sig); err != nil {
+		return err
+	}
+	rawTx := trans.RawTx().(*types.Transaction)
+	sender, err := types.HomesteadSigner{}.Sender(rawTx)
+	if err != nil {
+		return fmt.Errorf("failed to recover sender's address from the signature: %v", err)
+	}
+	if !reflect.DeepEqual(sender.Bytes(), trans.Sender()) {
+		return fmt.Errorf("sender's address does not match")
+	}
+	return c.contractBackend.SendTransaction(ctx, rawTx)
+}
+
+//extractAbiParams retrieves the values for arguments of abi's method, from the contractData object.
+//names of arguments and fields of the contractData will be matched ignoring case.
+func extractAbiParams(method abi.Method, contractData interface{}) ([]interface{}, error) {
+	params := make([]interface{}, 0, len(method.Inputs))
+	obj := reflect.ValueOf(contractData)
+	for _, arg := range method.Inputs {
+		value := obj.FieldByNameFunc(func(name string) bool {
+			return strings.EqualFold(arg.Name, name)
+		})
+		if !value.IsValid() {
+			return nil, fmt.Errorf("arg [%v] not found", arg.Name)
+		}
+		//special handler for address, as byte slice and array can not convert directly
+		if arg.Type.Type == reflect.TypeOf(common.Address{}) {
+			var addr common.Address
+			copy(addr[:], value.Bytes())
+			params = append(params, addr)
+
+			continue
+		}
+
+		if !value.Type().ConvertibleTo(arg.Type.Type) {
+			return nil, fmt.Errorf("arg [%v] type is not convertable", arg.Name)
+		}
+		params = append(params, value.Interface())
+	}
+	return params, nil
+}
+
+// getContentContract gets content contract from Ethereum chain with its address.
 func (c *ChainEthereum) getContentContract(addr []byte) (*ConsumeContent, error) {
 	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.contractBackend)
 	if err != nil {
-		log.Printf("faild to find smart contract, err:%v\n", err)
 		return nil, err
 	}
 	return ct, nil
 }
 
-// GetSkillContract gets skill contract from Ethereum chain with its address.
+// getSkillContract gets skill contract from Ethereum chain with its address.
 func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
 	ct, err := NewConsumeSkill(common.BytesToAddress(addr), c.contractBackend)
 	if err != nil {
@@ -68,80 +200,30 @@ func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
 	return ct, nil
 }
 
-// GetContract gets smart contract from Ethereum chain with its address.
-func (c *ChainEthereum) GetContract(addr []byte, t reflect.Type) (interface{}, error) {
-	switch t {
-	case reflect.TypeOf((*contract.ConsumeContract)(nil)):
-		return c.getContentContract(addr)
-	case reflect.TypeOf((*contract.SkillContract)(nil)):
-		return c.getSkillContract(addr)
-	default:
-		return nil, fmt.Errorf("unknown contract type:%v", t.Name())
-	}
-}
-
-// DeployContract method convert the domain contract to Ehtereum smart contract and deploy it.
-// The address of the deployed smart contract will be returned if success.
-func (c *ChainEthereum) DeployContract(ctx context.Context, icontract interface{}) (contractAddr []byte, err error) {
-	switch icontract.(type) {
-	case *contract.ConsumeContract:
-		return c.deployContentContract(context.TODO(), icontract.(*contract.ConsumeContract))
-	case *contract.SkillContract:
-		return c.deploySkillContract(ctx, icontract.(*contract.SkillContract))
-	default:
-		return nil, errors.New("unsupported contract type")
-	}
-}
-
-func (c *ChainEthereum) deployContentContract(ctx context.Context, contract *contract.ConsumeContract) (contractAddr []byte, err error) {
-	opts := bind.NewKeyedTransactor(contract.Owner.PrivateKey)
-	ownerAddr := ethcrypto.PubkeyToAddress(contract.Owner.PrivateKey.PublicKey)
-	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
-	addr, tx, _, err := DeployConsumeContent(opts, c.contractBackend, ownerAddr, platformAddr, contract.Price, contract.Ratio)
+//WaitMined blocks the caller until the transaction is mined, or gets an error
+func (c *ChainEthereum) WaitMined(ctx context.Context, tx interface{}) error {
+	receipt, err := bind.WaitMined(ctx, c.deployBackend, tx.(*types.Transaction))
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("wait mined returns error:%v", err)
 	}
-
-	if addr, err = c.waitContractDeployed(ctx, tx); err == bind.ErrNoCodeAfterDeploy {
-		return nil, err
+	if receipt.ContractAddress == (common.Address{}) {
+		return fmt.Errorf("zero address")
 	}
-	// update contract address after deployed
-	contract.Addr = addr.Bytes()
-	contract.Nonce = tx.Nonce()
-	return contract.Addr, err
+	//TODO: check what exactly "receipt.Status" means.
+	//When creating contract, we always get a "0" as the staus, but the contract can be sucessly deployed and called.
+	// if receipt.Status == types.ReceiptStatusFailed {
+	// 	return fmt.Errorf("transaction failed")
+	// }
+	return err
 }
 
-//DeploySkillContract send the contract to block chain and wait for it to be mined.
-//If the address returned is not nil, then it can be used even there is an error returned, but the contract may not yet be mined.
-func (c *ChainEthereum) deploySkillContract(ctx context.Context, contract *contract.SkillContract) (contractAddr []byte, err error) {
-	opts := bind.NewKeyedTransactor(contract.Producer.PrivateKey)
-	prodAddr := ethcrypto.PubkeyToAddress(contract.Producer.PrivateKey.PublicKey)
-	platformAddr := ethcrypto.PubkeyToAddress(contract.Platform.PrivateKey.PublicKey)
-	consAddr := ethcrypto.PubkeyToAddress(contract.Consumer.PrivateKey.PublicKey)
-	hash := hex.EncodeToString(contract.Skill.Hash)
-	addr, tx, _, err := DeployConsumeSkill(opts, c.contractBackend, hash, prodAddr, platformAddr, consAddr, contract.Price, contract.Ratio)
-	if err != nil {
-		return nil, err
-	}
-
-	if addr, err = c.waitContractDeployed(ctx, tx); err == bind.ErrNoCodeAfterDeploy {
-		return nil, err
-	}
-	// update contract address after deployed
-	contract.Addr = addr.Bytes()
-	contract.Nonce = tx.Nonce()
-	return contract.Addr, err
+//WaitContractDeployed blocks the caller untile the transactio to create a contract is mined, or gets an error.
+//The difference with WaitMined is that it also make sure the contrace code is not empty.
+func (c *ChainEthereum) WaitContractDeployed(ctx context.Context, tx interface{}) (common.Address, error) {
+	return bind.WaitDeployed(ctx, c.deployBackend, tx.(*types.Transaction))
 }
 
-func (c *ChainEthereum) waitContractDeployed(ctx context.Context, tx *types.Transaction) (common.Address, error) {
-	if ctx == nil {
-		ctx, _ = context.WithTimeout(context.Background(), ContractDeploymentTimeout)
-	}
-
-	return bind.WaitDeployed(ctx, c.deployBackend, tx)
-}
-
-func (c *ChainEthereum) WatchEvent(ctx context.Context, contractDeployed *ConsumeSkill, stateChan chan<- *ConsumeSkillStateChange) (event.Subscription, error) {
+func (c *ChainEthereum) watchEvent(ctx context.Context, contractDeployed *ConsumeSkill, stateChan chan<- *ConsumeSkillStateChange) (event.Subscription, error) {
 	watchOpts := &bind.WatchOpts{Start: nil, Context: ctx} // start from the latest block
 	return contractDeployed.WatchStateChange(watchOpts, stateChan)
 }

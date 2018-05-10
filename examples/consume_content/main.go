@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"flag"
 	"io/ioutil"
 	"log"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -18,7 +21,6 @@ import (
 	"github.com/icstglobal/go-icst/chain"
 	"github.com/icstglobal/go-icst/chain/ethereum"
 	"github.com/icstglobal/go-icst/contract"
-	"github.com/icstglobal/go-icst/publish"
 
 	"github.com/icstglobal/go-icst/content"
 	"github.com/icstglobal/go-icst/user"
@@ -49,20 +51,38 @@ func main() {
 
 	testData := "test data"
 	owner := &user.User{PrivateKey: ownerKey.PrivateKey}
+	ownerAddr := crypto.PubkeyToAddress(owner.PrivateKey.PublicKey).Bytes()
 	platform := &user.User{PrivateKey: platformKey.PrivateKey}
+	platformAddr := crypto.PubkeyToAddress(platform.PrivateKey.PublicKey).Bytes()
 	consumer := &user.User{PrivateKey: consumerKey.PrivateKey}
-	content := &content.Content{Owner: owner, Data: []byte(testData)}
-	opts := contract.Options{Platform: platform, Price: 1, Ratio: 50}
+	opts := contract.Options{Platform: platformAddr, Price: 1, Ratio: 50}
 
 	var addr []byte
 	// If contract address not given, deploy a new one
 	if contractAddrString == nil || *contractAddrString == "" {
-		publisher := publish.NewContentPublisher(chain)
+		publisher := content.NewPublisher(chain, nil)
 		//contract options
+		contractData := make(map[string]interface{})
+		contractData["PPublisher"] = ownerAddr
+		contractData["PPlatform"] = opts.Platform
+		contractData["PHash"] = []byte(testData)
+		contractData["PPrice"] = opts.Price
+		contractData["PRatio"] = opts.Ratio
 
-		addr, err = publisher.PubContent(content, opts)
+		trans, err := publisher.Pub(context.Background(), ownerAddr, contractData)
 		if err != nil {
 			log.Fatal(err)
+		}
+		sig, err := crypto.Sign(trans.Hash(), owner.PrivateKey)
+		if err != nil {
+			log.Fatal("failed to sign a transaction", err)
+		}
+		err = chain.ConfirmTrans(context.Background(), trans, sig)
+		if err != nil {
+			log.Fatal("failed to confirm contract creation transaction")
+		}
+		if err = chain.WaitMined(context.Background(), trans.RawTx()); err != nil {
+			log.Fatal("error happen when wait transaction mined", err)
 		}
 		log.Printf("smart contract deployed to address:%v\n", common.BytesToHash(addr).Hex())
 	} else {
@@ -72,7 +92,7 @@ func main() {
 		}
 	}
 
-	ct, err := chain.GetContract(addr)
+	ct, err := chain.GetContract(addr, "Content")
 	if err != nil {
 		log.Fatal(err)
 	}

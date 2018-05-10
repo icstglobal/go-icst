@@ -1,35 +1,14 @@
 package metadata
 
 import (
-	"crypto"
-	"encoding/hex"
 	"encoding/json"
-	"time"
-
-	"github.com/icstglobal/go-icst/content"
 )
 
 //ContentMetadata represents metadata of a content
 type ContentMetadata struct {
 	Hash  string `json:"hash,required"`
 	Date  int64  `json:"date,required"`
-	Owner UserID `json:"owner,required"`
-}
-
-// UserID identify a user by its public key
-type UserID struct {
-	PublicKey crypto.PublicKey `json:"public_key,required"`
-	//crypto algorithm to apply the publick key, like AES, ecdsa
-	Crypto string `json:"crypto,required"`
-}
-
-//FromContent creates ContentMetadata instance from the content
-func FromContent(c *content.Content) ContentMetadata {
-	return ContentMetadata{
-		Hash:  hex.EncodeToString(c.Hash),
-		Date:  time.Now().Unix(),
-		Owner: UserID{c.Owner.PrivateKey.Public(), "ecdsa"},
-	}
+	Owner string `json:"owner,required"`
 }
 
 //ContentMetaFromJSON deserialize content metadata from json string
@@ -49,11 +28,12 @@ func ContentMetaToJSON(meta ContentMetadata) (string, error) {
 	return string(buf), nil
 }
 
+//SkillMetadata represents metadata of a skill contract
 type SkillMetadata struct {
 	Hash      string `json:"hash,required"`
 	Date      int64  `json:"date,required"`
 	Price     uint32 `json:"price,required"`
-	Publisher UserID `json:"publisher,required"`
-	Platform  UserID `json:"platform,required"`
-	Consumer  UserID `json:"consumer,required"`
+	Publisher string `json:"publisher,required"`
+	Platform  string `json:"platform,required"`
+	Consumer  string `json:"consumer,required"`
 }

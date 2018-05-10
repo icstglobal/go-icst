@@ -10,8 +10,8 @@ import (
 // ConsumeContract is the contract for consuming a content directly
 type ConsumeContract struct {
 	Ctt      *content.Content
-	Platform *user.User
-	Owner    *user.User
+	Platform []byte
+	Owner    []byte
 	Price    uint32
 	Ratio    uint8  // ratio to split the fee
 	Addr     []byte // the address of the smart contract after being deployed to the chain
@@ -19,7 +19,7 @@ type ConsumeContract struct {
 }
 
 // NewConsumeContract creates a new contract for content consuming. It can never be changed.
-func NewConsumeContract(c *content.Content, platform *user.User,
+func NewConsumeContract(c *content.Content, platform []byte,
 	fee uint32, ratio uint8) *ConsumeContract {
 	return &ConsumeContract{Ctt: c, Platform: platform, Owner: c.Owner,
 		Price: fee, Ratio: ratio,

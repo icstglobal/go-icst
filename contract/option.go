@@ -1,9 +1,8 @@
 package contract
 
-import "github.com/icstglobal/go-icst/user"
-
 type Options struct {
-	Platform *user.User
+	//address of platform
+	Platform []byte
 	Price    uint32
 	Ratio    uint8
 }

@@ -2,14 +2,17 @@ package chain
 
 import (
 	"context"
-	"reflect"
+
+	"github.com/icstglobal/go-icst/transaction"
 
 	"github.com/icstglobal/go-icst/chain/ethereum"
 )
 
 type Chain interface {
-	GetContract(addr []byte, t reflect.Type) (interface{}, error)
-	DeployContract(ctx context.Context, icontract interface{}) (contractAddr []byte, err error)
+	GetContract(addr []byte, contractType string) (interface{}, error)
+	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.ContractTransaction, error)
+	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
+	WaitMined(ctx context.Context, tx interface{}) error
 }
 
 // ChainType defines the type of underlying blockchain
@@ -20,6 +23,13 @@ const (
 	Ethereum ChainType = 0
 	//EOS blockchain
 	EOS ChainType = 1
+)
+
+type ContractType string
+
+const (
+	ContentContractType ContractType = "Content"
+	SkillContractType   ContractType = "Skill"
 )
 
 func DialEthereum(url string) (Chain, error) {
