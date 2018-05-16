@@ -3,6 +3,7 @@ package ethereum
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 	"reflect"
 	"strings"
@@ -206,14 +207,13 @@ func (c *ChainEthereum) WaitMined(ctx context.Context, tx interface{}) error {
 	if err != nil {
 		return fmt.Errorf("wait mined returns error:%v", err)
 	}
-	if receipt.ContractAddress == (common.Address{}) {
-		return fmt.Errorf("zero address")
-	}
+
 	//TODO: check what exactly "receipt.Status" means.
 	//When creating contract, we always get a "0" as the staus, but the contract can be sucessly deployed and called.
-	// if receipt.Status == types.ReceiptStatusFailed {
-	// 	return fmt.Errorf("transaction failed")
-	// }
+	if receipt.Status == types.ReceiptStatusFailed {
+		// return fmt.Errorf("transaction failed")
+		log.Printf("transaction receipt address:%v, status:%v\n", receipt.ContractAddress.Hex(), receipt.Status)
+	}
 	return err
 }
 
