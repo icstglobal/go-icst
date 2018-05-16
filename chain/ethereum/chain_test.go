@@ -197,7 +197,7 @@ func TestConsumeContentContract(t *testing.T) {
 }
 func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
-	keystring, err := ioutil.ReadFile("~/ethereum-nodes/ethereum-node-b/keystore/UTC--2018-04-02T07-45-10.235766815Z--566303d021f916ff6ac743db2514beaadb05b1b6")
+	keystring, err := ioutil.ReadFile("/Users/dalei/ethereum-nodes/ethereum-node-b/keystore/UTC--2018-04-02T07-45-10.235766815Z--566303d021f916ff6ac743db2514beaadb05b1b6")
 	if err != nil {
 		t.Fatal("cannot load key from keystore", err)
 	}
@@ -214,15 +214,15 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	t.Log("sim backend created")
 	chain := &ChainEthereum{contractBackend: blc.contractBackend, deployBackend: blc.deployBackend}
 	contractData := struct {
-		PPublisher common.Address
-		PPlatform  common.Address
-		PConsumer  common.Address
+		PPublisher []byte
+		PPlatform  []byte
+		PConsumer  []byte
 		PPrice     uint32
 		PRatio     uint8
 	}{
-		PPublisher: ownerAddr,
-		PPlatform:  ownerAddr,
-		PConsumer:  ownerAddr,
+		PPublisher: ownerAddr.Bytes(),
+		PPlatform:  ownerAddr.Bytes(),
+		PConsumer:  ownerAddr.Bytes(),
 		PPrice:     1,
 		PRatio:     50,
 	}
@@ -271,22 +271,22 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 }
 
 func TestExtractAbiParams(t *testing.T) {
-	parsed, err := abi.JSON(strings.NewReader(ConsumeSkillABI))
+	parsed, err := abi.JSON(strings.NewReader(ConsumeContentABI))
 	if err != nil {
 		t.Fatal(err)
 	}
 	contractData := struct {
 		PHash      string
-		PPublisher common.Address
-		PPlatform  common.Address
-		PConsumer  common.Address
+		PPublisher []byte
+		PPlatform  []byte
+		PConsumer  []byte
 		PPrice     uint32
 		PRatio     uint8
 	}{
 		PHash:      "hash",
-		PPublisher: common.Address{},
-		PPlatform:  common.Address{},
-		PConsumer:  common.Address{},
+		PPublisher: common.Address{}.Bytes(),
+		PPlatform:  common.Address{}.Bytes(),
+		PConsumer:  common.Address{}.Bytes(),
 		PPrice:     10,
 		PRatio:     50,
 	}

@@ -11,7 +11,9 @@ contract ConsumeContent {
     uint public count;
     mapping (address=>uint) deposits;
     
-    function ConsumeContent(address pPublisher, address pPlatform, uint32 pPrice, uint8 pRatio) public{
+    event Consume(address user);
+    
+    function ConsumeContent (address pPublisher, address pPlatform, uint32 pPrice, uint8 pRatio) public{
         publisher = pPublisher;
         platform = pPlatform;
         price = pPrice;

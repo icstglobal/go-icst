@@ -7,17 +7,19 @@ import (
 	"math/big"
 	"strings"
 
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // ConsumeContentABI is the input ABI used to generate the binding from.
-const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint32\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint32\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"user\",\"type\":\"address\"}],\"name\":\"Consume\",\"type\":\"event\"}]"
 
 // ConsumeContentBin is the compiled bytecode used for deploying new contracts.
-const ConsumeContentBin = `0x6060604052341561000f57600080fd5b6040516080806104338339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805460ff90931678010000000000000000000000000000000000000000000000000260c060020a60ff021963ffffffff909716740100000000000000000000000000000000000000000260a060020a63ffffffff0219989099169390921692909217959095169590951792909216929092179092555050610355806100de6000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146101055780638c72c54e1461012e578063a035b1fe14610141575b600080fd5b341561009257600080fd5b61009a61016d565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf610173565b005b6100bf6101fe565b34156100d457600080fd5b6100dc6102a8565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f35b341561011057600080fd5b6101186102c4565b60405160ff909116815260200160405180910390f35b341561013957600080fd5b6100dc6102e9565b341561014c57600080fd5b610154610305565b60405163ffffffff909116815260200160405180910390f35b60025481565b73ffffffffffffffffffffffffffffffffffffffff33166000908152600360205260408120548190116101a557600080fd5b5073ffffffffffffffffffffffffffffffffffffffff3316600081815260036020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101fb57600080fd5b50565b60015460009074010000000000000000000000000000000000000000900463ffffffff16341461022d57600080fd5b600280546001908101909155546064907801000000000000000000000000000000000000000000000000900460ff1634026000805473ffffffffffffffffffffffffffffffffffffffff9081168252600360205260408083208054959094049485019093556001541681522080543492909203909101905550565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b6001547801000000000000000000000000000000000000000000000000900460ff1681565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60015474010000000000000000000000000000000000000000900463ffffffff16815600a165627a7a72305820a7dc09e862d3c4dcca2b37099b128529eb6eb6e498860210bc444a1505ca46e00029`
+const ConsumeContentBin = `0x6060604052341561000f57600080fd5b6040516080806104338339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805460ff90931678010000000000000000000000000000000000000000000000000260c060020a60ff021963ffffffff909716740100000000000000000000000000000000000000000260a060020a63ffffffff0219989099169390921692909217959095169590951792909216929092179092555050610355806100de6000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146101055780638c72c54e1461012e578063a035b1fe14610141575b600080fd5b341561009257600080fd5b61009a61016d565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf610173565b005b6100bf6101fe565b34156100d457600080fd5b6100dc6102a8565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f35b341561011057600080fd5b6101186102c4565b60405160ff909116815260200160405180910390f35b341561013957600080fd5b6100dc6102e9565b341561014c57600080fd5b610154610305565b60405163ffffffff909116815260200160405180910390f35b60025481565b73ffffffffffffffffffffffffffffffffffffffff33166000908152600360205260408120548190116101a557600080fd5b5073ffffffffffffffffffffffffffffffffffffffff3316600081815260036020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101fb57600080fd5b50565b60015460009074010000000000000000000000000000000000000000900463ffffffff16341461022d57600080fd5b600280546001908101909155546064907801000000000000000000000000000000000000000000000000900460ff1634026000805473ffffffffffffffffffffffffffffffffffffffff9081168252600360205260408083208054959094049485019093556001541681522080543492909203909101905550565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b6001547801000000000000000000000000000000000000000000000000900460ff1681565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60015474010000000000000000000000000000000000000000900463ffffffff16815600a165627a7a72305820c3e886438b121e3adc7d87b3bf1f1520bff4fdf7d2c672c12ad0ffea3629f0a50029`
 
 // DeployConsumeContent deploys a new Ethereum contract, binding an instance of ConsumeContent to it.
 func DeployConsumeContent(auth *bind.TransactOpts, backend bind.ContractBackend, pPublisher common.Address, pPlatform common.Address, pPrice uint32, pRatio uint8) (common.Address, *types.Transaction, *ConsumeContent, error) {
@@ -344,4 +346,126 @@ func (_ConsumeContent *ConsumeContentSession) WithDraw() (*types.Transaction, er
 // Solidity: function withDraw() returns()
 func (_ConsumeContent *ConsumeContentTransactorSession) WithDraw() (*types.Transaction, error) {
 	return _ConsumeContent.Contract.WithDraw(&_ConsumeContent.TransactOpts)
+}
+
+// ConsumeContentConsumeIterator is returned from FilterConsume and is used to iterate over the raw logs and unpacked data for Consume events raised by the ConsumeContent contract.
+type ConsumeContentConsumeIterator struct {
+	Event *ConsumeContentConsume // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConsumeContentConsumeIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConsumeContentConsume)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConsumeContentConsume)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConsumeContentConsumeIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConsumeContentConsumeIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConsumeContentConsume represents a Consume event raised by the ConsumeContent contract.
+type ConsumeContentConsume struct {
+	User common.Address
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterConsume is a free log retrieval operation binding the contract event 0xed480582cb70333538c62bc08fc214900615d688a5b307eac95efe48af4ba924.
+//
+// Solidity: e Consume(user address)
+func (_ConsumeContent *ConsumeContentFilterer) FilterConsume(opts *bind.FilterOpts) (*ConsumeContentConsumeIterator, error) {
+
+	logs, sub, err := _ConsumeContent.contract.FilterLogs(opts, "Consume")
+	if err != nil {
+		return nil, err
+	}
+	return &ConsumeContentConsumeIterator{contract: _ConsumeContent.contract, event: "Consume", logs: logs, sub: sub}, nil
+}
+
+// WatchConsume is a free log subscription operation binding the contract event 0xed480582cb70333538c62bc08fc214900615d688a5b307eac95efe48af4ba924.
+//
+// Solidity: e Consume(user address)
+func (_ConsumeContent *ConsumeContentFilterer) WatchConsume(opts *bind.WatchOpts, sink chan<- *ConsumeContentConsume) (event.Subscription, error) {
+
+	logs, sub, err := _ConsumeContent.contract.WatchLogs(opts, "Consume")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConsumeContentConsume)
+				if err := _ConsumeContent.contract.UnpackLog(event, "Consume", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
 }
