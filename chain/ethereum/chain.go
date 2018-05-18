@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -25,6 +26,13 @@ import (
 //contractDeploymentTimeout  is the default timeout for contract deployment
 const contractDeploymentTimeout = 20 * time.Second
 const contractCreationGasLimit uint64 = 1000000
+const contractCallMethodGasLimit uint64 = 500000
+
+//ErrorUnknownContractType indicates an unsupported contract type
+var ErrorUnknownContractType = errors.New("unknown contract type")
+
+//ErrorMethodNameNotFound indicates the method to call of a contract does not exist
+var ErrorMethodNameNotFound = errors.New("contract method name not found")
 
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
@@ -66,13 +74,16 @@ func (c *ChainEthereum) GetContract(addr []byte, contractType string) (interface
 //The transaction is not sent out yet and must be confirmed later by sender.
 func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.ContractTransaction, error) {
 	var parsed abi.ABI
+	var bin string
 	var err error
 	switch contractType {
 	case "Content":
 		parsed, err = abi.JSON(strings.NewReader(ConsumeContentABI))
+		bin = ConsumeContentBin
 		break
 	case "Skill":
 		parsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI))
+		bin = ConsumeSkillBin
 		break
 	default:
 		err = fmt.Errorf("unknown contract type:%v", contractType)
@@ -82,19 +93,85 @@ func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractTy
 		return nil, err
 	}
 
-	return c.createContract(ctx, from, parsed, contractData)
+	return c.createContract(ctx, from, parsed, bin, contractData)
 }
 
-func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi.ABI, contractData interface{}) (*transaction.ContractTransaction, error) {
+// Call inits a transaction to call a contract method
+// The transaction is not sent out yet and must be confirmed later by sender
+// param "value" is the money to sent to the transaction address
+// param "callData" is a container of all the args needed for method
+func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.ContractTransaction, error) {
+	var abiParsed abi.ABI
+	var err error
+	switch contractType {
+	case "Content":
+		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeContentABI)); err != nil {
+			return nil, err
+		}
+		break
+	case "Skill":
+		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI)); err != nil {
+			return nil, err
+		}
+		break
+	default:
+		return nil, ErrorUnknownContractType
+	}
+	return c.callMethod(ctx, from, abiParsed, contractAddr, methodName, value, callData)
+}
+
+func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed abi.ABI, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.ContractTransaction, error) {
+	method, found := abiParsed.Methods[methodName]
+	if !found {
+		return nil, ErrorMethodNameNotFound
+	}
+	params, err := extractAbiParams(method, callData)
+	if err != nil {
+		return nil, err
+	}
+	input, err := abiParsed.Pack(methodName, params...)
+	if err != nil {
+		return nil, err
+	}
+	fromAddr := common.BytesToAddress(from)
+	var nonce uint64
+	if nonce, err = c.contractBackend.PendingNonceAt(ctx, fromAddr); err != nil {
+		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
+	}
+	var gasPrice *big.Int
+	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+		return nil, fmt.Errorf("failed to suggest gas price: %v", err)
+	}
+	rawTx := types.NewTransaction(nonce, common.BytesToAddress(contractAddr), value, contractCallMethodGasLimit, gasPrice, input)
+
+	ct := transaction.NewContractTransaction(rawTx, from)
+	ct.ContractAddr = contractAddr
+	ct.TxHashFunc = func(rawTx interface{}) []byte {
+		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
+	}
+	ct.SignFunc = func(sig []byte) error {
+		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
+		if err != nil {
+			return fmt.Errorf("failed to update transaction signature:%v", err)
+		}
+
+		ct.SetRawTx(cpyTx)
+		return nil
+	}
+	return ct, nil
+}
+
+func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi.ABI, bin string, contractData interface{}) (*transaction.ContractTransaction, error) {
 	params, err := extractAbiParams(abi.Constructor, contractData)
 	if err != nil {
 		return nil, err
 	}
+	// empty method name means "constructor" method
 	input, err := abi.Pack("", params...)
 	if err != nil {
 		return nil, err
 	}
-	bytecode := common.FromHex(ConsumeContentBin)
+	bytecode := common.FromHex(bin)
 	bytecode = append(bytecode, input...)
 	fromAddr := common.BytesToAddress(from)
 	var nonce uint64

@@ -180,34 +180,39 @@ func TestConsumeContentContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("transaction mined")
+
+	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", new(big.Int).SetUint64(uint64(contractData.PPrice)), contractData)
+	if err != nil {
+		t.Fatal("failed to call method", err)
+	}
+	sig, err = crypto.Sign(ct.Hash(), owner.PrivateKey)
+	if err != nil {
+		t.Fatal("failed to sign raw tx", err)
+	}
+	err = chain.ConfirmTrans(context.Background(), ct, sig)
+	if err != nil {
+		t.Fatal("failed to send raw tx", err)
+	}
+	err = chain.WaitMined(context.Background(), ct.RawTx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	simBackend.Commit()
+
 	var sc *ConsumeContent
 	if contractData, err := chain.GetContract(ct.ContractAddr, "Content"); err != nil {
 		t.Fatal(err)
 	} else {
 		sc = contractData.(*ConsumeContent)
 	}
-
-	//call contract.Start
-	t.Log("call contract")
-	price, err := sc.Price(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("contract's price:%v", price)
-
-	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
-	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
-	transOpts.GasLimit = 200000
-	tx, err := sc.Consume(transOpts)
-	err = chain.WaitMined(context.Background(), tx)
-	if err != nil {
-		t.Fatal(err)
-	}
 	cnt, err := sc.Count(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("count consumed:%v", cnt.Uint64())
+	if cnt.Int64() != 1 {
+		t.Fail()
+	}
 }
 func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
@@ -241,36 +246,37 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 		PRatio:     50,
 	}
 
-	t.Log("deploy contract")
-	ct, err := chain.NewContract(context.Background(), ownerAddr.Bytes(), "Content", contractData)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
+	// t.Log("deploy contract")
+	// ct, err := chain.NewContract(context.Background(), ownerAddr.Bytes(), "Content", contractData)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
 
-	//sign the transaction locally, without send private key to the remote
-	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("transaction signed by sender")
-	err = chain.ConfirmTrans(context.Background(), ct, sig)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("transaction sent to block chain")
-	err = chain.WaitMined(context.Background(), ct.RawTx())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("mined")
-	_, err = chain.WaitContractDeployed(context.Background(), ct.RawTx())
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("transaction deployed")
+	// //sign the transaction locally, without send private key to the remote
+	// sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("transaction signed by sender")
+	// err = chain.ConfirmTrans(context.Background(), ct, sig)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("transaction sent to block chain")
+	// err = chain.WaitMined(context.Background(), ct.RawTx())
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("mined")
+	// _, err = chain.WaitContractDeployed(context.Background(), ct.RawTx())
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// t.Log("transaction deployed")
 	var sc *ConsumeContent
-	contractAddr := ct.ContractAddr
+	// contractAddr := ct.ContractAddr
+	contractAddr := common.HexToAddress("c8828443845797748be043690ae1060193f085f9").Bytes()
 	if ethContract, err := chain.GetContract(contractAddr, "Content"); err != nil {
 		t.Fatal(err)
 	} else {
