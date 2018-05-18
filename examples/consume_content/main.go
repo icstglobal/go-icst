@@ -10,8 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -109,13 +107,19 @@ func main() {
 		return
 	}
 
-	transactor := bind.NewKeyedTransactor(consumer.PrivateKey)
-	transactor.Value = big.NewInt(int64(opts.Price))
-	tx, err := contentContract.Consume(transactor)
+	callData := new(struct{})
+	trans, err := chain.Call(context.TODO(), ownerAddr, "Content", addr, "consume", big.NewInt(int64(opts.Price)), callData)
+	sig, err := crypto.Sign(trans.Hash(), consumer.PrivateKey)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to sign a transaction", err)
 	}
-	log.Printf("transaction for content consuming:%+v", tx)
+	err = chain.ConfirmTrans(context.Background(), trans, sig)
+	if err != nil {
+		log.Fatal("failed to confirm contract creation transaction")
+	}
+	if err = chain.WaitMined(context.Background(), trans.RawTx()); err != nil {
+		log.Fatal("error happen when wait transaction mined", err)
+	}
 
 	cnt, err = contentContract.Count(nil)
 	if err != nil {

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 
@@ -45,6 +47,14 @@ func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
 		contractBackend: client,
 		deployBackend:   client,
+	}
+}
+
+// NewSimChainEthereum creates a new Ethereum chain object with the SimulatedBackend
+func NewSimChainEthereum(backend *backends.SimulatedBackend) *ChainEthereum {
+	return &ChainEthereum{
+		contractBackend: backend,
+		deployBackend:   backend,
 	}
 }
 

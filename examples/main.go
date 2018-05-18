@@ -1,24 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 
 	"github.com/icstglobal/go-icst/chain"
 	"github.com/icstglobal/go-icst/chain/ethereum"
+	"github.com/icstglobal/go-icst/content"
 	"github.com/icstglobal/go-icst/contract"
-	"github.com/icstglobal/go-icst/publish"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/icstglobal/go-icst/content"
 	"github.com/icstglobal/go-icst/user"
 )
 
@@ -29,42 +26,62 @@ func main() {
 	testData := "test content"
 	ownerKey, _ := crypto.GenerateKey()
 	owner := &user.User{PrivateKey: ownerKey}
-	content := &content.Content{Owner: owner, Data: []byte(testData)}
+	ownerAddr := crypto.PubkeyToAddress(owner.PrivateKey.PublicKey)
 	platformKey, _ := crypto.GenerateKey()
 	platform := &user.User{PrivateKey: platformKey}
+	platformAddr := crypto.PubkeyToAddress(platform.PrivateKey.PublicKey)
 	//test chain
 	simChain, simBackend, _ := SimChain([]*user.User{owner, platform})
-	publisher := publish.NewContentPublisher(simChain)
+	publisher := content.NewPublisher(simChain, nil)
 	//contract options
-	opts := contract.Options{Platform: platform, Price: 1, Ratio: 50}
+	opts := contract.Options{Platform: platformAddr.Bytes(), Price: 1, Ratio: 50}
 	var err error
-	addr, err := publisher.PubContent(content, opts)
+	contractData := make(map[string]interface{})
+	contractData["PPublisher"] = ownerAddr.Bytes()
+	contractData["PPlatform"] = opts.Platform
+	contractData["PHash"] = testData
+	contractData["PPrice"] = opts.Price
+	contractData["PRatio"] = opts.Ratio
+	ct, err := publisher.Pub(context.Background(), ownerAddr.Bytes(), contractData)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("smart contract deployed to address:%v\n", common.BytesToHash(addr).Hex())
+	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = simChain.ConfirmTrans(context.Background(), ct, sig)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	fmt.Println("mining")
 	simBackend.Commit()
 
-	ct, err := simChain.GetContract(addr)
+	simChain.WaitMined(context.Background(), ct.RawTx())
+	log.Printf("smart contract deployed to address:%v\n", ct.ContractAddr)
+
+	ctr, err := simChain.GetContract(ct.ContractAddr, string(chain.ContentContractType))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	contentContract := ct.(*ethereum.ConsumeContent)
+	contentContract := ctr.(*ethereum.ConsumeContent)
 	cnt, err := contentContract.Count(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("count:%v\n", cnt) //output:0
 
-	transactor := bind.NewKeyedTransactor(owner.PrivateKey)
-	transactor.Value = big.NewInt(int64(opts.Price))
-	//we dont care about the transaction now
-	_, err = contentContract.Consume(transactor)
+	callData := new(struct{})
+	ct, err = simChain.Call(context.TODO(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", big.NewInt(int64(opts.Price)), callData)
+	sig, err = crypto.Sign(ct.Hash(), owner.PrivateKey)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to sign a transaction", err)
+	}
+	err = simChain.ConfirmTrans(context.Background(), ct, sig)
+	if err != nil {
+		log.Fatal("failed to confirm contract creation transaction")
 	}
 
 	fmt.Println("mining")
@@ -86,5 +103,5 @@ func SimChain(accounts []*user.User) (chain.Chain, *backends.SimulatedBackend, e
 	}
 
 	simBackend := backends.NewSimulatedBackend(alloc)
-	return &ethereum.ChainEthereum{Backend: simBackend}, simBackend, nil
+	return ethereum.NewSimChainEthereum(simBackend), simBackend, nil
 }
