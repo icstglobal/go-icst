@@ -132,15 +132,15 @@ func TestConsumeContentContract(t *testing.T) {
 	t.Log("sim backend created")
 	chain := &ChainEthereum{contractBackend: simBackend, deployBackend: simBackend}
 	contractData := struct {
-		PPublisher common.Address
-		PPlatform  common.Address
-		PConsumer  common.Address
+		PPublisher []byte
+		PPlatform  []byte
+		PConsumer  []byte
 		PPrice     uint32
 		PRatio     uint8
 	}{
-		PPublisher: ownerAddr,
-		PPlatform:  ownerAddr,
-		PConsumer:  ownerAddr,
+		PPublisher: ownerAddr.Bytes(),
+		PPlatform:  ownerAddr.Bytes(),
+		PConsumer:  ownerAddr.Bytes(),
 		PPrice:     1,
 		PRatio:     50,
 	}
@@ -194,6 +194,20 @@ func TestConsumeContentContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("contract's price:%v", price)
+
+	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
+	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
+	transOpts.GasLimit = 200000
+	tx, err := sc.Consume(transOpts)
+	err = chain.WaitMined(context.Background(), tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cnt, err := sc.Count(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("count consumed:%v", cnt.Uint64())
 }
 func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
@@ -211,7 +225,7 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	t.Logf("ownerAddr:%v", ownerAddr.String())
 
 	blc, err := DialEthereum("http://localhost:8545")
-	t.Log("sim backend created")
+	t.Log("ethereum node connected")
 	chain := &ChainEthereum{contractBackend: blc.contractBackend, deployBackend: blc.deployBackend}
 	contractData := struct {
 		PPublisher []byte
@@ -256,10 +270,11 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	}
 	t.Log("transaction deployed")
 	var sc *ConsumeContent
-	if contractData, err := chain.GetContract(ct.ContractAddr, "Content"); err != nil {
+	contractAddr := ct.ContractAddr
+	if ethContract, err := chain.GetContract(contractAddr, "Content"); err != nil {
 		t.Fatal(err)
 	} else {
-		sc = contractData.(*ConsumeContent)
+		sc = ethContract.(*ConsumeContent)
 	}
 
 	//call contract.Start
@@ -268,6 +283,20 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
+	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
+	transOpts.GasLimit = 200000
+	tx, err := sc.Consume(transOpts)
+	err = chain.WaitMined(context.Background(), tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cnt, err := sc.Count(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("count consumed:%v", cnt.Uint64())
 }
 
 func TestExtractAbiParams(t *testing.T) {
