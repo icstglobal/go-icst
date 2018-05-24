@@ -2,8 +2,10 @@ package ethereum
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math/big"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -181,6 +183,27 @@ func TestConsumeContentContract(t *testing.T) {
 	}
 	t.Log("transaction mined")
 
+	type EventV struct {
+		User  []byte
+		Count uint32
+	}
+	var rawEvt ConsumeContentEventConsume
+	events, err := chain.WatchContractEvent(context.Background(), ct.ContractAddr, "Content", "EventConsume", reflect.TypeOf(rawEvt))
+	if err != nil {
+		t.Fatal("failed to watch event", err)
+	}
+
+	quit := make(chan struct{}, 1)
+	go func() {
+		fmt.Println("listerning events...")
+		e := <-events
+		t.Logf("event received:%+v", e.V)
+		e.Unwatch()
+		var q struct{}
+		quit <- q
+		fmt.Println("quit event loop")
+	}()
+
 	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", new(big.Int).SetUint64(uint64(contractData.PPrice)), contractData)
 	if err != nil {
 		t.Fatal("failed to call method", err)
@@ -213,6 +236,10 @@ func TestConsumeContentContract(t *testing.T) {
 	if cnt.Int64() != 1 {
 		t.Fail()
 	}
+
+	t.Log("wait until we get an event...")
+	<-quit
+	t.Log("quit")
 }
 func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
@@ -229,9 +256,12 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	ownerAddr := crypto.PubkeyToAddress(owner.PrivateKey.PublicKey)
 	t.Logf("ownerAddr:%v", ownerAddr.String())
 
-	blc, err := DialEthereum("http://localhost:8545")
+	// blc, err := DialEthereum("ws://localhost:8546")
+	blc, err := DialEthereum("/Users/dalei/ethereum-nodes/ethereum-node-b/geth.ipc")
+	if err != nil {
+		t.Fatal("failed to connect to eth", err)
+	}
 	t.Log("ethereum node connected")
-	chain := &ChainEthereum{contractBackend: blc.contractBackend, deployBackend: blc.deployBackend}
 	contractData := struct {
 		PPublisher []byte
 		PPlatform  []byte
@@ -246,38 +276,48 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 		PRatio:     50,
 	}
 
-	// t.Log("deploy contract")
-	// ct, err := chain.NewContract(context.Background(), ownerAddr.Bytes(), "Content", contractData)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
+	t.Log("deploy contract")
+	ct, err := blc.NewContract(context.Background(), ownerAddr.Bytes(), "Content", contractData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
 
-	// //sign the transaction locally, without send private key to the remote
-	// sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("transaction signed by sender")
-	// err = chain.ConfirmTrans(context.Background(), ct, sig)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("transaction sent to block chain")
-	// err = chain.WaitMined(context.Background(), ct.RawTx())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("mined")
-	// _, err = chain.WaitContractDeployed(context.Background(), ct.RawTx())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// t.Log("transaction deployed")
+	//sign the transaction locally, without send private key to the remote
+	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("transaction signed by sender")
+	err = blc.ConfirmTrans(context.Background(), ct, sig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("transaction sent to block chain")
+	err = blc.WaitMined(context.Background(), ct.RawTx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("mined")
+	_, err = blc.WaitContractDeployed(context.Background(), ct.RawTx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("transaction deployed")
+
+	contractAddr := ct.ContractAddr
+	// contractAddr := common.HexToAddress("c8828443845797748be043690ae1060193f085f9").Bytes()
+
+	t.Log("watchevent")
+	var rawEvt ConsumeContentEventConsume
+	events, err := blc.WatchContractEvent(context.Background(), contractAddr, "Content", "EventConsume", reflect.TypeOf(rawEvt))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var sc *ConsumeContent
-	// contractAddr := ct.ContractAddr
-	contractAddr := common.HexToAddress("c8828443845797748be043690ae1060193f085f9").Bytes()
-	if ethContract, err := chain.GetContract(contractAddr, "Content"); err != nil {
+
+	if ethContract, err := blc.GetContract(contractAddr, "Content"); err != nil {
 		t.Fatal(err)
 	} else {
 		sc = ethContract.(*ConsumeContent)
@@ -294,7 +334,7 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
 	transOpts.GasLimit = 200000
 	tx, err := sc.Consume(transOpts)
-	err = chain.WaitMined(context.Background(), tx)
+	err = blc.WaitMined(context.Background(), tx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -303,6 +343,10 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("count consumed:%v", cnt.Uint64())
+
+	e := <-events
+	t.Logf("event:%#v", e)
+	e.Unwatch()
 }
 
 func TestExtractAbiParams(t *testing.T) {

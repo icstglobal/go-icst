@@ -3,10 +3,9 @@ package chain
 import (
 	"context"
 	"math/big"
+	"reflect"
 
 	"github.com/icstglobal/go-icst/transaction"
-
-	"github.com/icstglobal/go-icst/chain/ethereum"
 )
 
 type Chain interface {
@@ -34,6 +33,10 @@ const (
 	SkillContractType   ContractType = "Skill"
 )
 
-func DialEthereum(url string) (Chain, error) {
-	return ethereum.DialEthereum(url)
+type ContractEvent struct {
+	Addr    []byte       //contract address
+	Name    string       //event name
+	T       reflect.Type //type of underlying chain specific contract event
+	V       interface{}  //underlying chain specific contract event
+	Unwatch func()       //unwatch the event at any time
 }

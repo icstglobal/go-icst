@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/icstglobal/go-icst/chain"
 	"github.com/icstglobal/go-icst/transaction"
 )
 
@@ -40,6 +41,7 @@ var ErrorMethodNameNotFound = errors.New("contract method name not found")
 type ChainEthereum struct {
 	contractBackend bind.ContractBackend
 	deployBackend   bind.DeployBackend
+	contractEvents  chan *chain.ContractEvent
 }
 
 // NewChainEthereum creates a new Ethereum chain object with an existing ethclient
@@ -47,6 +49,7 @@ func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
 		contractBackend: client,
 		deployBackend:   client,
+		contractEvents:  make(chan *chain.ContractEvent, 1024),
 	}
 }
 
@@ -55,6 +58,7 @@ func NewSimChainEthereum(backend *backends.SimulatedBackend) *ChainEthereum {
 	return &ChainEthereum{
 		contractBackend: backend,
 		deployBackend:   backend,
+		contractEvents:  make(chan *chain.ContractEvent, 1024),
 	}
 }
 
@@ -313,4 +317,77 @@ func (c *ChainEthereum) WaitContractDeployed(ctx context.Context, tx interface{}
 func (c *ChainEthereum) watchEvent(ctx context.Context, contractDeployed *ConsumeSkill, stateChan chan<- *ConsumeSkillStateChange) (event.Subscription, error) {
 	watchOpts := &bind.WatchOpts{Start: nil, Context: ctx} // start from the latest block
 	return contractDeployed.WatchStateChange(watchOpts, stateChan)
+}
+
+//WatchContractEvent listening on the events from contract, and wrap it in a general contract event struct
+//It returns error if the given event if not found by name
+func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, contractType string, eventName string, eventVType reflect.Type) (<-chan *chain.ContractEvent, error) {
+	abi, err := getAbi(contractType)
+	if err != nil {
+		return nil, err
+	}
+
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abi, c.contractBackend, c.contractBackend, c.contractBackend)
+	opts := new(bind.WatchOpts)
+	opts.Context = ctx
+	//watch from the latest block
+	logs, sub, err := ctr.WatchLogs(opts, eventName)
+	if err != nil {
+		return nil, err
+	}
+
+	quit := make(chan struct{}, 1)
+	//start event loop to convert eth logs to our contract event type
+	go func() {
+		for {
+			select {
+			case rawLog := <-logs:
+
+				v := reflect.New(eventVType).Interface()
+				if err = abi.Events[eventName].Inputs.Unpack(v, rawLog.Data); err != nil {
+					// if err = unpack(abi.Events[eventName], v, rawLog.Data); err != nil {
+					log.Println("[ERROR]failed to parse raw event log,", err)
+					break
+				}
+
+				c.contractEvents <- &chain.ContractEvent{
+					Addr: addr,
+					Name: eventName,
+					T:    eventVType,
+					V:    v,
+					Unwatch: func() {
+						var q struct{}
+						quit <- q         //quit the event loop
+						sub.Unsubscribe() //unsubscribe event watching on block chain
+					},
+				}
+			case <-ctx.Done():
+				break
+			case <-quit:
+				break
+			}
+		}
+	}()
+
+	return c.contractEvents, nil
+}
+
+func getAbi(contractType string) (abi.ABI, error) {
+	var abiParsed abi.ABI
+	var err error
+	switch contractType {
+	case "Content":
+		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeContentABI)); err != nil {
+			return abi.ABI{}, err
+		}
+		break
+	case "Skill":
+		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI)); err != nil {
+			return abi.ABI{}, err
+		}
+		break
+	default:
+		return abi.ABI{}, ErrorUnknownContractType
+	}
+	return abiParsed, nil
 }
