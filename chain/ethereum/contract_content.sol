@@ -11,7 +11,7 @@ contract ConsumeContent {
     uint public count;
     mapping (address=>uint) deposits;
     
-    event Consume(address user);
+    event EventConsume(address user, uint count);
     
     function ConsumeContent (address pPublisher, address pPlatform, uint32 pPrice, uint8 pRatio) public{
         publisher = pPublisher;
@@ -30,6 +30,8 @@ contract ConsumeContent {
         uint256 toPublisher = msg.value * ratio / 100;
         deposits[publisher] += toPublisher;
         deposits[platform] += msg.value - toPublisher; 
+
+        emit EventConsume(msg.sender, count);
     }
 
     //withdraw each one's own

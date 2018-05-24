@@ -16,10 +16,10 @@ import (
 )
 
 // ConsumeContentABI is the input ABI used to generate the binding from.
-const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint32\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"user\",\"type\":\"address\"}],\"name\":\"Consume\",\"type\":\"event\"}]"
+const ConsumeContentABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"count\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withDraw\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"consume\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"platform\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"ratio\",\"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"publisher\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"price\",\"outputs\":[{\"name\":\"\",\"type\":\"uint32\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"name\":\"pPublisher\",\"type\":\"address\"},{\"name\":\"pPlatform\",\"type\":\"address\"},{\"name\":\"pPrice\",\"type\":\"uint32\"},{\"name\":\"pRatio\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"count\",\"type\":\"uint256\"}],\"name\":\"EventConsume\",\"type\":\"event\"}]"
 
 // ConsumeContentBin is the compiled bytecode used for deploying new contracts.
-const ConsumeContentBin = `0x6060604052341561000f57600080fd5b6040516080806104338339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805460ff90931678010000000000000000000000000000000000000000000000000260c060020a60ff021963ffffffff909716740100000000000000000000000000000000000000000260a060020a63ffffffff0219989099169390921692909217959095169590951792909216929092179092555050610355806100de6000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146101055780638c72c54e1461012e578063a035b1fe14610141575b600080fd5b341561009257600080fd5b61009a61016d565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf610173565b005b6100bf6101fe565b34156100d457600080fd5b6100dc6102a8565b60405173ffffffffffffffffffffffffffffffffffffffff909116815260200160405180910390f35b341561011057600080fd5b6101186102c4565b60405160ff909116815260200160405180910390f35b341561013957600080fd5b6100dc6102e9565b341561014c57600080fd5b610154610305565b60405163ffffffff909116815260200160405180910390f35b60025481565b73ffffffffffffffffffffffffffffffffffffffff33166000908152600360205260408120548190116101a557600080fd5b5073ffffffffffffffffffffffffffffffffffffffff3316600081815260036020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101fb57600080fd5b50565b60015460009074010000000000000000000000000000000000000000900463ffffffff16341461022d57600080fd5b600280546001908101909155546064907801000000000000000000000000000000000000000000000000900460ff1634026000805473ffffffffffffffffffffffffffffffffffffffff9081168252600360205260408083208054959094049485019093556001541681522080543492909203909101905550565b60015473ffffffffffffffffffffffffffffffffffffffff1681565b6001547801000000000000000000000000000000000000000000000000900460ff1681565b60005473ffffffffffffffffffffffffffffffffffffffff1681565b60015474010000000000000000000000000000000000000000900463ffffffff16815600a165627a7a72305820c3e886438b121e3adc7d87b3bf1f1520bff4fdf7d2c672c12ad0ffea3629f0a50029`
+const ConsumeContentBin = `0x6060604052341561000f57600080fd5b60405160808061042d8339810160405280805191906020018051919060200180519190602001805160008054600160a060020a03978816600160a060020a0319918216179091556001805460ff90931678010000000000000000000000000000000000000000000000000260c060020a60ff021963ffffffff909716740100000000000000000000000000000000000000000260a060020a63ffffffff021998909916939092169290921795909516959095179290921692909217909255505061034f806100de6000396000f3006060604052600436106100825763ffffffff7c010000000000000000000000000000000000000000000000000000000060003504166306661abd81146100875780630fdb1c10146100ac5780631dedc6f7146100c15780634bde38c8146100c957806371ca337d146100f85780638c72c54e14610121578063a035b1fe14610134575b600080fd5b341561009257600080fd5b61009a610160565b60405190815260200160405180910390f35b34156100b757600080fd5b6100bf610166565b005b6100bf6101d7565b34156100d457600080fd5b6100dc6102bc565b604051600160a060020a03909116815260200160405180910390f35b341561010357600080fd5b61010b6102cb565b60405160ff909116815260200160405180910390f35b341561012c57600080fd5b6100dc6102f0565b341561013f57600080fd5b6101476102ff565b60405163ffffffff909116815260200160405180910390f35b60025481565b600160a060020a03331660009081526003602052604081205481901161018b57600080fd5b50600160a060020a033316600081815260036020526040808220805492905590919082156108fc0290839051600060405180830381858888f1935050505015156101d457600080fd5b50565b60015460009074010000000000000000000000000000000000000000900463ffffffff16341461020657600080fd5b600280546001908101909155546064907801000000000000000000000000000000000000000000000000900460ff16340260008054600160a060020a039081168252600360205260408083208054959094049485019093556001541681528190208054348490030190556002549192507fe7092102cafaeb2e518d7d55510eec03f722fc75b987ac4d6b7fb8ea57d63f6791339151600160a060020a03909216825260208201526040908101905180910390a150565b600154600160a060020a031681565b6001547801000000000000000000000000000000000000000000000000900460ff1681565b600054600160a060020a031681565b60015474010000000000000000000000000000000000000000900463ffffffff16815600a165627a7a72305820320b341b56ea34622013a51e474b65e2bb011111290d4934f077dceb3a9b313a0029`
 
 // DeployConsumeContent deploys a new Ethereum contract, binding an instance of ConsumeContent to it.
 func DeployConsumeContent(auth *bind.TransactOpts, backend bind.ContractBackend, pPublisher common.Address, pPlatform common.Address, pPrice uint32, pRatio uint8) (common.Address, *types.Transaction, *ConsumeContent, error) {
@@ -348,9 +348,9 @@ func (_ConsumeContent *ConsumeContentTransactorSession) WithDraw() (*types.Trans
 	return _ConsumeContent.Contract.WithDraw(&_ConsumeContent.TransactOpts)
 }
 
-// ConsumeContentConsumeIterator is returned from FilterConsume and is used to iterate over the raw logs and unpacked data for Consume events raised by the ConsumeContent contract.
-type ConsumeContentConsumeIterator struct {
-	Event *ConsumeContentConsume // Event containing the contract specifics and raw log
+// ConsumeContentEventConsumeIterator is returned from FilterEventConsume and is used to iterate over the raw logs and unpacked data for EventConsume events raised by the ConsumeContent contract.
+type ConsumeContentEventConsumeIterator struct {
+	Event *ConsumeContentEventConsume // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -364,7 +364,7 @@ type ConsumeContentConsumeIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ConsumeContentConsumeIterator) Next() bool {
+func (it *ConsumeContentEventConsumeIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -373,7 +373,7 @@ func (it *ConsumeContentConsumeIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ConsumeContentConsume)
+			it.Event = new(ConsumeContentEventConsume)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -388,7 +388,7 @@ func (it *ConsumeContentConsumeIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ConsumeContentConsume)
+		it.Event = new(ConsumeContentEventConsume)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -404,41 +404,42 @@ func (it *ConsumeContentConsumeIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ConsumeContentConsumeIterator) Error() error {
+func (it *ConsumeContentEventConsumeIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ConsumeContentConsumeIterator) Close() error {
+func (it *ConsumeContentEventConsumeIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ConsumeContentConsume represents a Consume event raised by the ConsumeContent contract.
-type ConsumeContentConsume struct {
-	User common.Address
-	Raw  types.Log // Blockchain specific contextual infos
+// ConsumeContentEventConsume represents a EventConsume event raised by the ConsumeContent contract.
+type ConsumeContentEventConsume struct {
+	User  common.Address
+	Count *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
 }
 
-// FilterConsume is a free log retrieval operation binding the contract event 0xed480582cb70333538c62bc08fc214900615d688a5b307eac95efe48af4ba924.
+// FilterEventConsume is a free log retrieval operation binding the contract event 0xe7092102cafaeb2e518d7d55510eec03f722fc75b987ac4d6b7fb8ea57d63f67.
 //
-// Solidity: e Consume(user address)
-func (_ConsumeContent *ConsumeContentFilterer) FilterConsume(opts *bind.FilterOpts) (*ConsumeContentConsumeIterator, error) {
+// Solidity: e EventConsume(user address, count uint256)
+func (_ConsumeContent *ConsumeContentFilterer) FilterEventConsume(opts *bind.FilterOpts) (*ConsumeContentEventConsumeIterator, error) {
 
-	logs, sub, err := _ConsumeContent.contract.FilterLogs(opts, "Consume")
+	logs, sub, err := _ConsumeContent.contract.FilterLogs(opts, "EventConsume")
 	if err != nil {
 		return nil, err
 	}
-	return &ConsumeContentConsumeIterator{contract: _ConsumeContent.contract, event: "Consume", logs: logs, sub: sub}, nil
+	return &ConsumeContentEventConsumeIterator{contract: _ConsumeContent.contract, event: "EventConsume", logs: logs, sub: sub}, nil
 }
 
-// WatchConsume is a free log subscription operation binding the contract event 0xed480582cb70333538c62bc08fc214900615d688a5b307eac95efe48af4ba924.
+// WatchEventConsume is a free log subscription operation binding the contract event 0xe7092102cafaeb2e518d7d55510eec03f722fc75b987ac4d6b7fb8ea57d63f67.
 //
-// Solidity: e Consume(user address)
-func (_ConsumeContent *ConsumeContentFilterer) WatchConsume(opts *bind.WatchOpts, sink chan<- *ConsumeContentConsume) (event.Subscription, error) {
+// Solidity: e EventConsume(user address, count uint256)
+func (_ConsumeContent *ConsumeContentFilterer) WatchEventConsume(opts *bind.WatchOpts, sink chan<- *ConsumeContentEventConsume) (event.Subscription, error) {
 
-	logs, sub, err := _ConsumeContent.contract.WatchLogs(opts, "Consume")
+	logs, sub, err := _ConsumeContent.contract.WatchLogs(opts, "EventConsume")
 	if err != nil {
 		return nil, err
 	}
@@ -448,8 +449,8 @@ func (_ConsumeContent *ConsumeContentFilterer) WatchConsume(opts *bind.WatchOpts
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ConsumeContentConsume)
-				if err := _ConsumeContent.contract.UnpackLog(event, "Consume", log); err != nil {
+				event := new(ConsumeContentEventConsume)
+				if err := _ConsumeContent.contract.UnpackLog(event, "EventConsume", log); err != nil {
 					return err
 				}
 				event.Raw = log
