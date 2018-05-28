@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -39,26 +41,29 @@ var ErrorMethodNameNotFound = errors.New("contract method name not found")
 
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
-	contractBackend bind.ContractBackend
-	deployBackend   bind.DeployBackend
-	contractEvents  chan *chain.ContractEvent
+	contractBackend  bind.ContractBackend
+	deployBackend    bind.DeployBackend
+	contractEvents   chan *chain.ContractEvent
+	chainStateReader ethereum.ChainStateReader
 }
 
 // NewChainEthereum creates a new Ethereum chain object with an existing ethclient
 func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
-		contractBackend: client,
-		deployBackend:   client,
-		contractEvents:  make(chan *chain.ContractEvent, 1024),
+		contractBackend:  client,
+		deployBackend:    client,
+		contractEvents:   make(chan *chain.ContractEvent, 1024),
+		chainStateReader: client,
 	}
 }
 
 // NewSimChainEthereum creates a new Ethereum chain object with the SimulatedBackend
 func NewSimChainEthereum(backend *backends.SimulatedBackend) *ChainEthereum {
 	return &ChainEthereum{
-		contractBackend: backend,
-		deployBackend:   backend,
-		contractEvents:  make(chan *chain.ContractEvent, 1024),
+		contractBackend:  backend,
+		deployBackend:    backend,
+		contractEvents:   make(chan *chain.ContractEvent, 1024),
+		chainStateReader: backend,
 	}
 }
 
@@ -370,6 +375,14 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 	}()
 
 	return c.contractEvents, nil
+}
+
+func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, error) {
+	b, err := c.chainStateReader.BalanceAt(ctx, common.BytesToAddress(addr), nil)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func getAbi(contractType string) (abi.ABI, error) {

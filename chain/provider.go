@@ -14,6 +14,7 @@ type Chain interface {
 	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.ContractTransaction, error)
 	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
 	WaitMined(ctx context.Context, tx interface{}) error
+	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
 }
 
 // ChainType defines the type of underlying blockchain
