@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/icstglobal/go-icst/chain"
-	"github.com/icstglobal/go-icst/chain/ethereum"
+	"github.com/icstglobal/go-icst/chain/eth"
 	"github.com/icstglobal/go-icst/user"
 )
 
@@ -45,7 +45,7 @@ func main() {
 	ownerAddr := crypto.PubkeyToAddress(owner.PrivateKey.PublicKey)
 	log.Printf("ownerAddr:%v", ownerAddr.String())
 
-	blc, err := ethereum.DialEthereum(*ipc)
+	blc, err := eth.DialEthereum(*ipc)
 	if err != nil {
 		log.Fatal("failed to connect to eth", err)
 	}
@@ -94,19 +94,19 @@ func main() {
 	log.Println("transaction deployed")
 
 	contractAddr := ct.ContractAddr
-	var rawEvt ethereum.ConsumeContentEventConsume
+	var rawEvt eth.ConsumeContentEventConsume
 	log.Println("watchevent")
 	events, err := blc.WatchContractEvent(context.Background(), contractAddr, "Content", "EventConsume", reflect.TypeOf(rawEvt))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var sc *ethereum.ConsumeContent
+	var sc *eth.ConsumeContent
 
 	if ethContract, err := blc.GetContract(contractAddr, "Content"); err != nil {
 		log.Fatal(err)
 	} else {
-		sc = ethContract.(*ethereum.ConsumeContent)
+		sc = ethContract.(*eth.ConsumeContent)
 	}
 
 	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)

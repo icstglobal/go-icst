@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/icstglobal/go-icst/chain"
-	"github.com/icstglobal/go-icst/chain/ethereum"
+	"github.com/icstglobal/go-icst/chain/eth"
 	"github.com/icstglobal/go-icst/contract"
 
 	"github.com/icstglobal/go-icst/content"
@@ -95,7 +95,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	contentContract := ct.(*ethereum.ConsumeContent)
+	contentContract := ct.(*eth.ConsumeContent)
 	cnt, err := contentContract.Count(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -137,7 +137,7 @@ func ethChain(url string) (chain.Chain, error) {
 		return nil, err
 	}
 
-	return ethereum.NewChainEthereum(client), nil
+	return eth.NewChainEthereum(client), nil
 }
 
 func initAccounts() {

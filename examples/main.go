@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 
 	"github.com/icstglobal/go-icst/chain"
-	"github.com/icstglobal/go-icst/chain/ethereum"
+	"github.com/icstglobal/go-icst/chain/eth"
 	"github.com/icstglobal/go-icst/content"
 	"github.com/icstglobal/go-icst/contract"
 
@@ -66,7 +66,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	contentContract := ctr.(*ethereum.ConsumeContent)
+	contentContract := ctr.(*eth.ConsumeContent)
 	cnt, err := contentContract.Count(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -103,5 +103,5 @@ func SimChain(accounts []*user.User) (chain.Chain, *backends.SimulatedBackend, e
 	}
 
 	simBackend := backends.NewSimulatedBackend(alloc)
-	return ethereum.NewSimChainEthereum(simBackend), simBackend, nil
+	return eth.NewSimChainEthereum(simBackend), simBackend, nil
 }
