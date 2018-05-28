@@ -20,8 +20,8 @@ type Chain interface {
 type ChainType int
 
 const (
-	//Ethereum blockchain
-	Ethereum ChainType = 0
+	//Eth blockchain
+	Eth ChainType = 0
 	//EOS blockchain
 	EOS ChainType = 1
 )
