@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"log"
@@ -383,6 +384,10 @@ func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, e
 		return nil, err
 	}
 	return b, nil
+}
+
+func (c *ChainEthereum) PubKeyToAddress(pub *ecdsa.PublicKey) []byte {
+	return ethcrypto.PubkeyToAddress(*pub).Bytes()
 }
 
 func getAbi(contractType string) (abi.ABI, error) {

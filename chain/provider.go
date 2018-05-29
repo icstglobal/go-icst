@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"math/big"
 	"reflect"
 
@@ -15,6 +16,7 @@ type Chain interface {
 	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
 	WaitMined(ctx context.Context, tx interface{}) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
+	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
 }
 
 // ChainType defines the type of underlying blockchain
