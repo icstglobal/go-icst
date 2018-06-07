@@ -58,7 +58,7 @@ func main() {
 	fmt.Println("mining")
 	simBackend.Commit()
 
-	simChain.WaitMined(context.Background(), ct.RawTx())
+	simChain.WaitMined(context.Background(), ct)
 	log.Printf("smart contract deployed to address:%v\n", ct.ContractAddr)
 
 	ctr, err := simChain.GetContract(ct.ContractAddr, string(chain.ContentContractType))

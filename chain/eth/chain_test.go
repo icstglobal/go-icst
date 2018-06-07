@@ -78,7 +78,7 @@ func TestConsumeSkillContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("transaction sent to block chain")
-	err = chain.WaitMined(context.Background(), ct.RawTx())
+	err = chain.WaitMined(context.Background(), ct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestConsumeContentContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("transaction sent to block chain")
-	err = chain.WaitMined(context.Background(), ct.RawTx())
+	err = chain.WaitMined(context.Background(), ct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestConsumeContentContract(t *testing.T) {
 	if err != nil {
 		t.Fatal("failed to send raw tx", err)
 	}
-	err = chain.WaitMined(context.Background(), ct.RawTx())
+	err = chain.WaitMined(context.Background(), ct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log("transaction sent to block chain")
-	err = blc.WaitMined(context.Background(), ct.RawTx())
+	err = blc.WaitMined(context.Background(), ct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,9 +332,21 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
 	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
 	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
-	transOpts.GasLimit = 200000
-	tx, err := sc.Consume(transOpts)
-	err = blc.WaitMined(context.Background(), tx)
+	transOpts.GasLimit = 2000001
+	var emptyCallData interface{} //consum method needs no input
+	ct, err = blc.Call(context.Background(), ownerAddr.Bytes(), "Content", contractAddr, "consume", transOpts.Value, emptyCallData)
+	if err != nil {
+		t.Fatal("failed to call method", err)
+	}
+	sig, err = crypto.Sign(ct.Hash(), owner.PrivateKey)
+	if err != nil {
+		t.Fatal("failed to sign raw tx", err)
+	}
+	err = blc.ConfirmTrans(context.Background(), ct, sig)
+	if err != nil {
+		t.Fatal("failed to send raw tx", err)
+	}
+	err = blc.WaitMined(context.Background(), ct)
 	if err != nil {
 		t.Fatal(err)
 	}
