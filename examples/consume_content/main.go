@@ -79,7 +79,7 @@ func main() {
 		if err != nil {
 			log.Fatal("failed to confirm contract creation transaction")
 		}
-		if err = chain.WaitMined(context.Background(), trans.RawTx()); err != nil {
+		if err = chain.WaitMined(context.Background(), trans); err != nil {
 			log.Fatal("error happen when wait transaction mined", err)
 		}
 		log.Printf("smart contract deployed to address:%v\n", common.BytesToHash(addr).Hex())
@@ -117,7 +117,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to confirm contract creation transaction")
 	}
-	if err = chain.WaitMined(context.Background(), trans.RawTx()); err != nil {
+	if err = chain.WaitMined(context.Background(), trans); err != nil {
 		log.Fatal("error happen when wait transaction mined", err)
 	}
 

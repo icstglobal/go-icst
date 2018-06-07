@@ -9,6 +9,8 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/icstglobal/go-icst/transaction"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -82,7 +84,7 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Println("transaction sent to block chain")
-	err = blc.WaitMined(context.Background(), ct.RawTx())
+	err = blc.WaitMined(context.Background(), ct)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -113,7 +115,8 @@ func main() {
 	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
 	transOpts.GasLimit = 200000
 	tx, err := sc.Consume(transOpts)
-	err = blc.WaitMined(context.Background(), tx)
+	ctConsume := transaction.NewContractTransaction(tx, ownerAddr.Bytes())
+	err = blc.WaitMined(context.Background(), ctConsume)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -299,8 +299,8 @@ func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
 }
 
 //WaitMined blocks the caller until the transaction is mined, or gets an error
-func (c *ChainEthereum) WaitMined(ctx context.Context, tx interface{}) error {
-	receipt, err := bind.WaitMined(ctx, c.deployBackend, tx.(*types.Transaction))
+func (c *ChainEthereum) WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error {
+	receipt, err := bind.WaitMined(ctx, c.deployBackend, trans.RawTx().(*types.Transaction))
 	if err != nil {
 		return fmt.Errorf("wait mined returns error:%v", err)
 	}

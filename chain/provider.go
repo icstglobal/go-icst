@@ -14,7 +14,7 @@ type Chain interface {
 	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.ContractTransaction, error)
 	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.ContractTransaction, error)
 	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
-	WaitMined(ctx context.Context, tx interface{}) error
+	WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
 	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
 }
