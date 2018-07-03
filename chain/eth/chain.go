@@ -169,6 +169,9 @@ func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed a
 	ct.TxHashFunc = func(rawTx interface{}) []byte {
 		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
 	}
+	ct.TxHexHashSignedFunc = func(rawTx interface{}) string {
+		return rawTx.(*types.Transaction).Hash().Hex()
+	}
 	ct.SignFunc = func(sig []byte) error {
 		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
 		if err != nil {
@@ -220,6 +223,9 @@ func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi
 	ct.TxHashFunc = func(rawTx interface{}) []byte {
 		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
 	}
+	ct.TxHexHashSignedFunc = func(rawTx interface{}) string {
+		return rawTx.(*types.Transaction).Hash().Hex()
+	}
 	ct.SignFunc = func(sig []byte) error {
 		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
 		if err != nil {
@@ -227,6 +233,7 @@ func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi
 		}
 
 		ct.SetRawTx(cpyTx)
+
 		return nil
 	}
 

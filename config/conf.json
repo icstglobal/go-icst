@@ -1,0 +1,13 @@
+{
+    "Mysql":{
+        "user": "icst",
+        "password": "icst",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "db": "icst"
+    },
+    "Redis":{
+        "host": "127.0.0.1",
+        "port": 6379
+    }
+}

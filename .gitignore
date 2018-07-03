@@ -19,3 +19,6 @@ glide.lock
 
 # Mac os
 .DS_Store
+
+# vender
+vendor/

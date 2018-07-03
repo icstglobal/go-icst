@@ -5,6 +5,7 @@ type ContractTransaction struct {
 	sender       []byte
 	ContractAddr []byte
 	TxHashFunc   func(rawTx interface{}) []byte
+	TxHexHashSignedFunc   func(rawTx interface{}) string
 	SignFunc     func(sig []byte) error
 }
 
@@ -28,6 +29,10 @@ func (t *ContractTransaction) SetRawTx(rawTx interface{}) {
 
 func (t *ContractTransaction) Hash() []byte {
 	return t.TxHashFunc(t.rawTx)
+}
+
+func (t *ContractTransaction) Hex() string {
+	return t.TxHexHashSignedFunc(t.rawTx)
 }
 
 func (t *ContractTransaction) WithSign(sig []byte) error {
