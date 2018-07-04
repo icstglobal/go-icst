@@ -2,10 +2,6 @@ package wallets
 
 import (
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
@@ -14,7 +10,6 @@ import (
 	"github.com/icstglobal/go-icst/transaction"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/icstglobal/go-icst/chain/eth"
-	// gcrypto "github.com/ethereum/go-ethereum/crypto"
 	db "github.com/icstglobal/go-icst/wallets/database"
 	conf "github.com/icstglobal/go-icst/config"
 )
@@ -79,11 +74,6 @@ func (w *Wallet) GetAccounts(ctx context.Context, walletID string) ([]AccountRec
 //UseAccount selects an account to user
 func (w *Wallet) UseAccount(ctx context.Context, accountID string) (*Account, error) {
 	accountBasic, err := w.s.GetAccountBasic(ctx, accountID)
-	fmt.Println(accountBasic.PubKey, "|======")
-	buf, err := base64.StdEncoding.DecodeString(accountBasic.PubKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode public key, caused by:%v", err)
-	}
 
 	a := &Account{ID: accountBasic.ID, s: w.s}
 	var blc chain.Chain
@@ -91,52 +81,11 @@ func (w *Wallet) UseAccount(ctx context.Context, accountID string) (*Account, er
 		return nil, err
 	}
 	a.blc = blc
-
-
-	// a.pubkey, err = gcrypto.UnmarshalPubkey(buf)
-	// if err != nil{
-		// return nil, fmt.Errorf("failed to parse public key, caused by:%v", err)
-	// }
-
-	var pub crypto.PublicKey
-	if pub, err = x509.ParsePKIXPublicKey(buf); err != nil {
+	a.pubkey, err = blc.UnmarshalPubkey(accountBasic.PubKey)
+	if err != nil{
 		return nil, fmt.Errorf("failed to parse public key, caused by:%v", err)
-	}
-	if ecdsaPub, ok := pub.(*ecdsa.PublicKey); !ok {
-		return nil, fmt.Errorf("not a ecdsa public key, caused by:%v", err)
-	} else {
-		a.pubkey = ecdsaPub
 	}
 
 	return a, nil
 }
 
-// Create Contract Transaction
-func (w Wallet) CreateContentContractTrans(ctx context.Context, a *Account, data map[string]interface{}) (*transaction.ContractTransaction, error) {
-	ownerAddr := a.Addr()
-	publisher := content.NewPublisher(a.blc, nil)
-	trans, err := publisher.Pub(context.Background(), ownerAddr, data)
-	if err != nil{
-		return nil, err
-	}
-
-	return trans, nil
-}
-
-// process after client sign
-// including confirm transaction and wait for mining
-func (w Wallet) AfterSign(ctx context.Context, a *Account, sigHex string, trans *transaction.ContractTransaction) (error) {
-	sig, err := hex.DecodeString(sigHex)
-	if err != nil{
-		return err
-	}
-
-	err = a.blc.ConfirmTrans(context.Background(), trans, sig)
-	if err != nil {
-		return fmt.Errorf("failed to confirm contract creation transaction", err)
-	}
-	if err = a.blc.WaitMined(context.Background(), trans); err != nil {
-		return fmt.Errorf("error happen when wait transaction mined", err)
-	}
-	return nil
-}

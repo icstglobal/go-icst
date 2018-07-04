@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"encoding/base64"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -415,4 +416,15 @@ func getAbi(contractType string) (abi.ABI, error) {
 		return abi.ABI{}, ErrorUnknownContractType
 	}
 	return abiParsed, nil
+}
+
+// UnmarshalPubkey converts base64 string to a secp256k1 public key.
+func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
+
+	buf, err := base64.StdEncoding.DecodeString(pub)
+	pubKey, err := ethcrypto.UnmarshalPubkey(buf)
+	if err != nil{
+		return nil, err
+	}
+	return pubKey, nil
 }
