@@ -2,12 +2,9 @@ package wallets
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/icstglobal/go-icst/chain"
-	"github.com/icstglobal/go-icst/content"
-	"github.com/icstglobal/go-icst/transaction"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/icstglobal/go-icst/chain/eth"
 	db "github.com/icstglobal/go-icst/wallets/database"
