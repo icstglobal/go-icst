@@ -20,20 +20,30 @@ type Wallet struct {
 	s  Store
 }
 
-// init wallet
+type ChainConf struct{
+	ChainType int
+	Url string
+}
+
+func NewWallet(walletID string) *Wallet {
+	return &Wallet{ID:walletID, s:&AccountRecord{}}
+}
+
+
+// init env
 // 1. dail main chain, init chain interface and save to pool
 // 2. init wallet store
-func (w *Wallet)Init(chainUrl string, chainTypes []int, confFile string) (error){
+func Init(chainConfs []*ChainConf, confFile string) (error){
     // init db
     conf.Load(confFile)
     // conf.Config.Mysql
     db.DBCon = db.DB()
 
     // init chain
-	for chainType := range(chainTypes){
-		if chainType == int(chain.Eth){
+	for _, chainConf:= range(chainConfs){
+		if chainConf.ChainType == int(chain.Eth){
 			//dial eth chain
-			url := chainUrl
+			url := chainConf.Url
 			client, err := ethclient.Dial(url)
 			if err != nil {
 				return fmt.Errorf("failed to connect eth rpc endpoint {%v}, err is:%v \n", url, err)
@@ -41,12 +51,11 @@ func (w *Wallet)Init(chainUrl string, chainTypes []int, confFile string) (error)
 			blc = eth.NewChainEthereum(client)
 			chain.Set(chain.Eth, blc)
 		}
-		if chainType == int(chain.EOS){
+		if chainConf.ChainType == int(chain.EOS){
 			fmt.Println("not support EOS yet.")
 		}
 	}
 
-	w.s = &AccountRecord{}
 	return nil
 }
 
