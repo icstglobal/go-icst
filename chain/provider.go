@@ -17,6 +17,7 @@ type Chain interface {
 	WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
 	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
+	UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error)
 }
 
 // ChainType defines the type of underlying blockchain

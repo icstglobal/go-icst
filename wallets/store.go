@@ -2,6 +2,8 @@ package wallets
 
 import (
 	"context"
+
+	"github.com/icstglobal/go-icst/chain"
 )
 
 type Store interface {
@@ -9,6 +11,9 @@ type Store interface {
 	GetKey(ctx context.Context, accountID string, encryptedHint string) (string, error)
 	SaveKey(ctx context.Context, accountID string, encryptedKey string) error
 	GetAccountBasic(ctx context.Context, accountID string) (AccountRecordBasic, error)
+	GetAccounts(ctx context.Context, walletID string) ([]AccountRecordBasic, error)
+	SetAccountBasic(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (AccountRecordBasic, error)
+	ExistAccount(ctx context.Context, pubKey string, chainType chain.ChainType) bool
 }
 
 type AccountRecord struct {
@@ -19,7 +24,7 @@ type AccountRecord struct {
 //AccountRecordBasic is the basic part of an account
 type AccountRecordBasic struct {
 	ID        string
-	ChainType int
+	ChainType chain.ChainType
 	PubKey    string //base 64
 }
 

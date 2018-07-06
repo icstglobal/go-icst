@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"encoding/base64"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -169,6 +170,9 @@ func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed a
 	ct.TxHashFunc = func(rawTx interface{}) []byte {
 		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
 	}
+	ct.TxHexHashSignedFunc = func(rawTx interface{}) string {
+		return rawTx.(*types.Transaction).Hash().Hex()
+	}
 	ct.SignFunc = func(sig []byte) error {
 		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
 		if err != nil {
@@ -220,6 +224,9 @@ func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi
 	ct.TxHashFunc = func(rawTx interface{}) []byte {
 		return types.HomesteadSigner{}.Hash(rawTx.(*types.Transaction)).Bytes()
 	}
+	ct.TxHexHashSignedFunc = func(rawTx interface{}) string {
+		return rawTx.(*types.Transaction).Hash().Hex()
+	}
 	ct.SignFunc = func(sig []byte) error {
 		cpyTx, err := ct.RawTx().(*types.Transaction).WithSignature(types.HomesteadSigner{}, sig)
 		if err != nil {
@@ -227,6 +234,7 @@ func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi
 		}
 
 		ct.SetRawTx(cpyTx)
+
 		return nil
 	}
 
@@ -408,4 +416,15 @@ func getAbi(contractType string) (abi.ABI, error) {
 		return abi.ABI{}, ErrorUnknownContractType
 	}
 	return abiParsed, nil
+}
+
+// UnmarshalPubkey converts base64 string to a secp256k1 public key.
+func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
+
+	buf, err := base64.StdEncoding.DecodeString(pub)
+	if err != nil{
+		return nil, err
+	}
+	pubKey := ethcrypto.ToECDSAPub(buf)
+	return pubKey, nil
 }
