@@ -3,16 +3,16 @@ package wallets
 import (
 	"context"
 	"crypto/ecdsa"
-	"errors"
-	"math/big"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/icstglobal/go-icst/common"
 
 	"github.com/icstglobal/go-icst/chain"
-	"github.com/icstglobal/go-icst/transaction"
 	"github.com/icstglobal/go-icst/content"
+	"github.com/icstglobal/go-icst/transaction"
 )
 
 //Account maps the block chain account, which has a public address and holds tokens
@@ -65,33 +65,32 @@ func (a *Account) Addr() []byte {
 	return a.blc.PubKeyToAddress(a.pubkey)
 }
 
-
-// Create Contract Transaction
+// CreateContentContractTrans creates contract transaction
 func (a *Account) CreateContentContractTrans(ctx context.Context, data map[string]interface{}) (*transaction.ContractTransaction, error) {
 	ownerAddr := a.Addr()
 	publisher := content.NewPublisher(a.blc, nil)
 	trans, err := publisher.Pub(context.Background(), ownerAddr, data)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
 	return trans, nil
 }
 
-// process after client sign
+// AfterSign process after client sign
 // including confirm transaction and wait for mining
-func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.ContractTransaction) (error) {
+func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.ContractTransaction) error {
 	sig, err := hex.DecodeString(sigHex)
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
 	err = a.blc.ConfirmTrans(context.Background(), trans, sig)
 	if err != nil {
-		return fmt.Errorf("failed to confirm contract creation transaction", err)
+		return fmt.Errorf("failed to confirm contract creation transaction:%v", err)
 	}
 	if err = a.blc.WaitMined(context.Background(), trans); err != nil {
-		return fmt.Errorf("error happen when wait transaction mined", err)
+		return fmt.Errorf("error happen when wait transaction mined:%v", err)
 	}
 	return nil
 }
