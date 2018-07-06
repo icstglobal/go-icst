@@ -422,9 +422,9 @@ func getAbi(contractType string) (abi.ABI, error) {
 func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
 
 	buf, err := base64.StdEncoding.DecodeString(pub)
-	pubKey, err := ethcrypto.UnmarshalPubkey(buf)
 	if err != nil{
 		return nil, err
 	}
+	pubKey := ethcrypto.ToECDSAPub(buf)
 	return pubKey, nil
 }
