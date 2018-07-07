@@ -98,9 +98,10 @@ func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transacti
 // Create Contract Transaction
 func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, data map[string]interface{}) (*transaction.ContractTransaction, error) {
 	ownerAddr := a.Addr()
-	callData := new(struct{})
+	// callData := new(struct{})
 	method := data["Method"].(string)
 	price := data["Price"].(int)
+	callData := data["CallData"]
 	cxAddr, err := hex.DecodeString(cxAddrStr)
 	if err != nil {
 		return nil, err
