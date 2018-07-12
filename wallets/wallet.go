@@ -20,7 +20,7 @@ func NewWallet(walletID string, s Store) *Wallet {
 }
 
 //ImportAccount save an account to user
-func (w *Wallet) ImportAccount(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (AccountRecordBasic, error) {
+func (w *Wallet) ImportAccount(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error) {
 	return w.s.SetAccountBasic(ctx, walletID, pubKey, chainType)
 }
 
@@ -28,11 +28,11 @@ func (w *Wallet) ExistAccount(ctx context.Context, pubKey string, chainType chai
 	return w.s.ExistAccount(ctx, pubKey, chainType)
 }
 
-func (w *Wallet) GetAccounts(ctx context.Context, walletID string) ([]AccountRecordBasic, error) {
+func (w *Wallet) GetAccounts(ctx context.Context, walletID string) ([]*AccountRecordBasic, error) {
 	return w.s.GetAccounts(ctx, walletID)
 }
 
-func (w *Wallet) GetAccountBasic(ctx context.Context, accountId string) (AccountRecordBasic, error) {
+func (w *Wallet) GetAccountBasic(ctx context.Context, accountId string) (*AccountRecordBasic, error) {
 	return w.s.GetAccountBasic(ctx, accountId)
 }
 
