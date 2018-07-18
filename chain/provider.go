@@ -18,6 +18,8 @@ type Chain interface {
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
 	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
 	UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error)
+	MarshalPubKey(pub *ecdsa.PublicKey) string
+	GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, error)
 }
 
 // ChainType defines the type of underlying blockchain

@@ -387,3 +387,27 @@ func TestExtractAbiParams(t *testing.T) {
 	}
 	t.Logf("%+v", args)
 }
+
+func TestMarshalPublicKey(t *testing.T) {
+	ownerKey, _ := crypto.GenerateKey()
+	owner := &user.User{PrivateKey: ownerKey}
+
+	alloc := make(core.GenesisAlloc)
+	for _, u := range []*user.User{owner} {
+		alloc[crypto.PubkeyToAddress(u.PrivateKey.PublicKey)] = core.GenesisAccount{Balance: big.NewInt(133700000)}
+	}
+
+	simBackend := backends.NewSimulatedBackend(alloc)
+	t.Log("sim backend created")
+	chain := &ChainEthereum{contractBackend: simBackend, deployBackend: simBackend}
+
+	buf := chain.MarshalPublicKey(&ownerKey.PublicKey)
+	keyCopy, err := chain.UnmarshalPubkey(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(ownerKey.PublicKey, *keyCopy) {
+		t.Fatal("public key not marshaled correctly")
+	}
+}

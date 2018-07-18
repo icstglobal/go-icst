@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-	"encoding/base64"
 
 	"github.com/ethereum/go-ethereum"
 
@@ -422,9 +422,20 @@ func getAbi(contractType string) (abi.ABI, error) {
 func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
 
 	buf, err := base64.StdEncoding.DecodeString(pub)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	pubKey := ethcrypto.ToECDSAPub(buf)
 	return pubKey, nil
+}
+
+//MarshalPubKey convert a public key to base 64 string
+func (c *ChainEthereum) MarshalPubKey(pub *ecdsa.PublicKey) string {
+	buf := ethcrypto.FromECDSAPub(pub)
+	return base64.StdEncoding.EncodeToString(buf)
+}
+
+//GenerateKey generates a new ecdsa public/private key pair
+func (c *ChainEthereum) GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, error) {
+	return ethcrypto.GenerateKey()
 }

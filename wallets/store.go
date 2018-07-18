@@ -9,7 +9,7 @@ import (
 type Store interface {
 	GetKeyHint(ctx context.Context, accountID string) (string, error)
 	GetKey(ctx context.Context, accountID string, encryptedHint string) (string, error)
-	SaveKey(ctx context.Context, accountID string, encryptedKey string) error
+	SaveKey(ctx context.Context, accountID string, encryptedKey string, hint string, encryptedHint string) error
 	GetAccountBasic(ctx context.Context, accountID string) (*AccountRecordBasic, error)
 	GetAccounts(ctx context.Context, walletID string) ([]*AccountRecordBasic, error)
 	SetAccountBasic(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error)
