@@ -439,3 +439,8 @@ func (c *ChainEthereum) MarshalPubKey(pub *ecdsa.PublicKey) string {
 func (c *ChainEthereum) GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, error) {
 	return ethcrypto.GenerateKey()
 }
+
+//Sign data with privatekey
+func (c *ChainEthereum) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+	return ethcrypto.Sign(hash, prv)
+}

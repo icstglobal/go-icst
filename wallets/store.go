@@ -12,7 +12,7 @@ type Store interface {
 	SaveKey(ctx context.Context, accountID string, encryptedKey string, hint string, encryptedHint string) error
 	GetAccountBasic(ctx context.Context, accountID string) (*AccountRecordBasic, error)
 	GetAccounts(ctx context.Context, walletID string) ([]*AccountRecordBasic, error)
-	SetAccountBasic(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error)
+	SetAccountBasic(ctx context.Context, walletID string, pubKey string, address string, chainType chain.ChainType) (*AccountRecordBasic, error)
 	ExistAccount(ctx context.Context, pubKey string, chainType chain.ChainType) bool
 }
 
@@ -26,6 +26,7 @@ type AccountRecordBasic struct {
 	ID        string
 	ChainType chain.ChainType
 	PubKey    string //base 64
+	Address   string
 }
 
 //AccountRecordSec is the security part of an account

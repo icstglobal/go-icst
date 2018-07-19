@@ -2,6 +2,7 @@ package wallets
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/icstglobal/go-icst/chain"
@@ -21,7 +22,19 @@ func NewWallet(walletID string, s Store) *Wallet {
 
 //ImportAccount save an account to user
 func (w *Wallet) ImportAccount(ctx context.Context, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error) {
-	return w.s.SetAccountBasic(ctx, w.ID, pubKey, chainType)
+	var blc chain.Chain
+	blc, err := chain.Get(chainType)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := blc.UnmarshalPubkey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	address := hex.EncodeToString(blc.PubKeyToAddress(publicKey))
+	return w.s.SetAccountBasic(ctx, w.ID, pubKey, address, chainType)
 }
 
 func (w *Wallet) ExistAccount(ctx context.Context, pubKey string, chainType chain.ChainType) bool {

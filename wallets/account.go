@@ -32,7 +32,13 @@ func (a *Account) GetBalance(ctx context.Context) (*big.Int, error) {
 func (a *Account) BackupKey(ctx context.Context, encryptedKey string, r *big.Int, s *big.Int, hint string, encryptedHint string) error {
 	//check the signature of the cypher text and store it
 	//The cypher text must be signed by the account's public key
-	hash := common.Hash([]byte(encryptedKey))
+
+	encryptedKeyBytes, err := hex.DecodeString(encryptedKey)
+	if err != nil {
+		return err
+	}
+
+	hash := common.Hash(encryptedKeyBytes)
 	if valid := ecdsa.Verify(a.PublicKey, hash[:], r, s); !valid {
 		return common.ErrorInvalidSignature
 	}
@@ -111,4 +117,8 @@ func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, dat
 	}
 
 	return trans, nil
+}
+
+func (a *Account) GetBlc() chain.Chain {
+	return a.blc
 }

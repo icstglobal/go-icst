@@ -20,6 +20,7 @@ type Chain interface {
 	UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error)
 	MarshalPubKey(pub *ecdsa.PublicKey) string
 	GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, error)
+	Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error)
 }
 
 // ChainType defines the type of underlying blockchain
