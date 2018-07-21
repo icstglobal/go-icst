@@ -107,6 +107,7 @@ func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, dat
 	method := data["Method"].(string)
 	price := data["Price"].(int)
 	callData := data["CallData"]
+
 	cxAddr, err := hex.DecodeString(cxAddrStr)
 	if err != nil {
 		return nil, err

@@ -34,6 +34,7 @@ import (
 const contractDeploymentTimeout = 20 * time.Second
 const contractCreationGasLimit uint64 = 1000000
 const contractCallMethodGasLimit uint64 = 500000
+const transferGasLimit uint64 = 1000000
 
 //ErrorUnknownContractType indicates an unsupported contract type
 var ErrorUnknownContractType = errors.New("unknown contract type")
@@ -43,19 +44,21 @@ var ErrorMethodNameNotFound = errors.New("contract method name not found")
 
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
-	contractBackend  bind.ContractBackend
-	deployBackend    bind.DeployBackend
-	contractEvents   chan *chain.ContractEvent
-	chainStateReader ethereum.ChainStateReader
+	contractBackend    bind.ContractBackend
+	deployBackend      bind.DeployBackend
+	contractEvents     chan *chain.ContractEvent
+	chainStateReader   ethereum.ChainStateReader
+	pendingStateReader ethereum.PendingStateReader
 }
 
 // NewChainEthereum creates a new Ethereum chain object with an existing ethclient
 func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
-		contractBackend:  client,
-		deployBackend:    client,
-		contractEvents:   make(chan *chain.ContractEvent, 1024),
-		chainStateReader: client,
+		contractBackend:    client,
+		deployBackend:      client,
+		contractEvents:     make(chan *chain.ContractEvent, 1024),
+		chainStateReader:   client,
+		pendingStateReader: client,
 	}
 }
 
@@ -86,6 +89,8 @@ func (c *ChainEthereum) GetContract(addr []byte, contractType string) (interface
 		return c.getContentContract(addr)
 	case "Skill":
 		return c.getSkillContract(addr)
+	case "ICST":
+		return c.getICSTContract(addr)
 	default:
 		return nil, fmt.Errorf("unknown contract type:%v", contractType)
 	}
@@ -105,6 +110,10 @@ func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractTy
 	case "Skill":
 		parsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI))
 		bin = ConsumeSkillBin
+		break
+	case "ICST":
+		parsed, err = abi.JSON(strings.NewReader(ICSTABI))
+		bin = ICSTBin
 		break
 	default:
 		err = fmt.Errorf("unknown contract type:%v", contractType)
@@ -132,6 +141,11 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 		break
 	case "Skill":
 		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI)); err != nil {
+			return nil, err
+		}
+		break
+	case "ICST":
+		if abiParsed, err = abi.JSON(strings.NewReader(ICSTABI)); err != nil {
 			return nil, err
 		}
 		break
@@ -262,27 +276,10 @@ func (c *ChainEthereum) ConfirmTrans(ctx context.Context, trans *transaction.Con
 //names of arguments and fields of the contractData will be matched ignoring case.
 func extractAbiParams(method abi.Method, contractData interface{}) ([]interface{}, error) {
 	params := make([]interface{}, 0, len(method.Inputs))
-	obj := reflect.ValueOf(contractData)
+	obj := contractData.(map[string]interface{})
+
 	for _, arg := range method.Inputs {
-		value := obj.FieldByNameFunc(func(name string) bool {
-			return strings.EqualFold(arg.Name, name)
-		})
-		if !value.IsValid() {
-			return nil, fmt.Errorf("arg [%v] not found", arg.Name)
-		}
-		//special handler for address, as byte slice and array can not convert directly
-		if arg.Type.Type == reflect.TypeOf(common.Address{}) {
-			var addr common.Address
-			copy(addr[:], value.Bytes())
-			params = append(params, addr)
-
-			continue
-		}
-
-		if !value.Type().ConvertibleTo(arg.Type.Type) {
-			return nil, fmt.Errorf("arg [%v] type is not convertable", arg.Name)
-		}
-		params = append(params, value.Interface())
+		params = append(params, obj[arg.Name])
 	}
 	return params, nil
 }
@@ -299,6 +296,16 @@ func (c *ChainEthereum) getContentContract(addr []byte) (*ConsumeContent, error)
 // getSkillContract gets skill contract from Ethereum chain with its address.
 func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
 	ct, err := NewConsumeSkill(common.BytesToAddress(addr), c.contractBackend)
+	if err != nil {
+		return nil, err
+	}
+
+	return ct, nil
+}
+
+// getICSTContract gets skill contract from Ethereum chain with its address.
+func (c *ChainEthereum) getICSTContract(addr []byte) (*ICST, error) {
+	ct, err := NewICST(common.BytesToAddress(addr), c.contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +394,13 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 }
 
 func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, error) {
-	b, err := c.chainStateReader.BalanceAt(ctx, common.BytesToAddress(addr), nil)
+
+	cxToken, err := c.GetContract(common.Hex2Bytes(ICSTAddr), "ICST")
+	if err != nil {
+		return nil, err
+	}
+	b, err := cxToken.(*ICST).BalanceOf(nil, common.BytesToAddress(addr))
+
 	if err != nil {
 		return nil, err
 	}
@@ -409,6 +422,11 @@ func getAbi(contractType string) (abi.ABI, error) {
 		break
 	case "Skill":
 		if abiParsed, err = abi.JSON(strings.NewReader(ConsumeSkillABI)); err != nil {
+			return abi.ABI{}, err
+		}
+		break
+	case "ICST":
+		if abiParsed, err = abi.JSON(strings.NewReader(ICSTABI)); err != nil {
 			return abi.ABI{}, err
 		}
 		break
@@ -443,4 +461,63 @@ func (c *ChainEthereum) GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, err
 //Sign data with privatekey
 func (c *ChainEthereum) Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
 	return ethcrypto.Sign(hash, prv)
+}
+
+//Transfer to other address
+func (c *ChainEthereum) Transfer(ctx context.Context, from []byte, to []byte, value *big.Int, prv *ecdsa.PrivateKey) (err error) {
+	fromAddr := common.BytesToAddress(from)
+	toAddr := common.BytesToAddress(to)
+	fmt.Printf("fromAddr, to, value: %v %v %v\n", fromAddr.Hex(), toAddr.Hex(), value)
+	var nonce uint64
+	if nonce, err = c.pendingStateReader.PendingNonceAt(ctx, fromAddr); err != nil {
+		return fmt.Errorf("failed to retrieve account nonce: %v", err)
+	}
+	var gasPrice *big.Int
+	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+		return fmt.Errorf("failed to suggest gas price: %v", err)
+	}
+	// new transaction
+	rawTx := types.NewTransaction(nonce, toAddr, value, transferGasLimit, gasPrice, nil)
+	fmt.Printf("Cost %v\n", rawTx.Cost())
+
+	// sign
+	signer := types.HomesteadSigner{}
+	h := signer.Hash(rawTx)
+	sig, err := c.Sign(h[:], prv)
+	if err != nil {
+		return err
+	}
+
+	// sign rawTransaction with sig
+	signedTx, err := rawTx.WithSignature(signer, sig)
+	// sender, err := types.Sender(signer, signedTx)
+	if err != nil {
+		return err
+	}
+
+	// submit to txpool
+	err = c.contractBackend.SendTransaction(ctx, signedTx)
+	if err != nil {
+		return err
+	}
+
+	// wait to mine
+	receipt, err := bind.WaitMined(ctx, c.deployBackend, signedTx)
+	if err != nil {
+		return fmt.Errorf("wait mined returns error:%v", err)
+	}
+
+	if receipt.Status == types.ReceiptStatusFailed {
+		log.Printf("transaction receipt address:%v, status:%v\n", receipt.ContractAddress.Hex(), receipt.Status)
+	}
+	return err
+}
+
+//Transfer token to other address
+func (c *ChainEthereum) TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.ContractTransaction, error) {
+	callData := map[string]interface{}{
+		"_to":    common.BytesToAddress(to),
+		"_value": value,
+	}
+	return c.Call(ctx, from, "ICST", common.Hex2Bytes(ICSTAddr), "transfer", big.NewInt(0), callData)
 }

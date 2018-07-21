@@ -1,12 +1,12 @@
 package transaction
 
 type ContractTransaction struct {
-	rawTx        interface{}
-	sender       []byte
-	ContractAddr []byte
-	TxHashFunc   func(rawTx interface{}) []byte
-	TxHexHashSignedFunc   func(rawTx interface{}) string
-	SignFunc     func(sig []byte) error
+	rawTx               interface{}
+	sender              []byte
+	ContractAddr        []byte
+	TxHashFunc          func(rawTx interface{}) []byte
+	TxHexHashSignedFunc func(rawTx interface{}) string
+	SignFunc            func(sig []byte) error
 }
 
 func NewContractTransaction(rawTx interface{}, sender []byte) *ContractTransaction {
