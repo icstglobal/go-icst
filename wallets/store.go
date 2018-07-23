@@ -2,6 +2,7 @@ package wallets
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/icstglobal/go-icst/chain"
 )
@@ -27,6 +28,7 @@ type AccountRecordBasic struct {
 	ChainType chain.ChainType
 	PubKey    string //base 64
 	Address   string
+	Balance   *big.Int
 }
 
 //AccountRecordSec is the security part of an account
