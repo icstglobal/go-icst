@@ -17,10 +17,10 @@ import (
 
 //Account maps the block chain account, which has a public address and holds tokens
 type Account struct {
-	ID     string
-	pubkey *ecdsa.PublicKey
-	blc    chain.Chain
-	s      Store
+	ID        string
+	PublicKey *ecdsa.PublicKey
+	blc       chain.Chain
+	s         Store
 }
 
 //GetBalance returns the current balance of this account
@@ -29,14 +29,20 @@ func (a *Account) GetBalance(ctx context.Context) (*big.Int, error) {
 }
 
 //BackupKey stores the ecypted key file, so that the user can recover it later
-func (a *Account) BackupKey(ctx context.Context, encryptedKey string, r *big.Int, s *big.Int) error {
+func (a *Account) BackupKey(ctx context.Context, encryptedKey string, r *big.Int, s *big.Int, hint string, encryptedHint string) error {
 	//check the signature of the cypher text and store it
 	//The cypher text must be signed by the account's public key
-	hash := common.Hash([]byte(encryptedKey))
-	if valid := ecdsa.Verify(a.pubkey, hash[:], r, s); !valid {
+
+	encryptedKeyBytes, err := hex.DecodeString(encryptedKey)
+	if err != nil {
+		return err
+	}
+
+	hash := common.Hash(encryptedKeyBytes)
+	if valid := ecdsa.Verify(a.PublicKey, hash[:], r, s); !valid {
 		return common.ErrorInvalidSignature
 	}
-	return a.s.SaveKey(ctx, a.ID, encryptedKey)
+	return a.s.SaveKey(ctx, a.ID, encryptedKey, hint, encryptedHint)
 }
 
 //RecoverKey returns the encrypted key file to the user. Don't do any decryption.
@@ -62,11 +68,11 @@ func (a *Account) RecoverKeyHint(ctx context.Context) (string, error) {
 
 //Addr returns the address of the account
 func (a *Account) Addr() []byte {
-	return a.blc.PubKeyToAddress(a.pubkey)
+	return a.blc.PubKeyToAddress(a.PublicKey)
 }
 
 // CreateContentContractTrans creates contract transaction
-func (a *Account) CreateContentContractTrans(ctx context.Context, data map[string]interface{}) (*transaction.ContractTransaction, error) {
+func (a *Account) CreateContentContractTrans(ctx context.Context, data map[string]interface{}) (*transaction.Transaction, error) {
 	ownerAddr := a.Addr()
 	publisher := content.NewPublisher(a.blc, nil)
 	trans, err := publisher.Pub(context.Background(), ownerAddr, data)
@@ -79,7 +85,7 @@ func (a *Account) CreateContentContractTrans(ctx context.Context, data map[strin
 
 // AfterSign process after client sign
 // including confirm transaction and wait for mining
-func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.ContractTransaction) error {
+func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.Transaction) error {
 	sig, err := hex.DecodeString(sigHex)
 	if err != nil {
 		return err
@@ -96,11 +102,12 @@ func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transacti
 }
 
 // Create Contract Transaction
-func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, data map[string]interface{}) (*transaction.ContractTransaction, error) {
+func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, data map[string]interface{}) (*transaction.Transaction, error) {
 	ownerAddr := a.Addr()
 	method := data["Method"].(string)
 	price := data["Price"].(int)
 	callData := data["CallData"]
+
 	cxAddr, err := hex.DecodeString(cxAddrStr)
 	if err != nil {
 		return nil, err
@@ -111,4 +118,8 @@ func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, dat
 	}
 
 	return trans, nil
+}
+
+func (a *Account) GetBlc() chain.Chain {
+	return a.blc
 }

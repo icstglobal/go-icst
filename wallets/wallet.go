@@ -2,6 +2,7 @@ package wallets
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/icstglobal/go-icst/chain"
@@ -20,16 +21,28 @@ func NewWallet(walletID string, s Store) *Wallet {
 }
 
 //ImportAccount save an account to user
-func (w *Wallet) ImportAccount(ctx context.Context, walletID string, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error) {
-	return w.s.SetAccountBasic(ctx, walletID, pubKey, chainType)
+func (w *Wallet) ImportAccount(ctx context.Context, pubKey string, chainType chain.ChainType) (*AccountRecordBasic, error) {
+	var blc chain.Chain
+	blc, err := chain.Get(chainType)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey, err := blc.UnmarshalPubkey(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	address := hex.EncodeToString(blc.PubKeyToAddress(publicKey))
+	return w.s.SetAccountBasic(ctx, w.ID, pubKey, address, chainType)
 }
 
 func (w *Wallet) ExistAccount(ctx context.Context, pubKey string, chainType chain.ChainType) bool {
 	return w.s.ExistAccount(ctx, pubKey, chainType)
 }
 
-func (w *Wallet) GetAccounts(ctx context.Context, walletID string) ([]*AccountRecordBasic, error) {
-	return w.s.GetAccounts(ctx, walletID)
+func (w *Wallet) GetAccounts(ctx context.Context) ([]*AccountRecordBasic, error) {
+	return w.s.GetAccounts(ctx, w.ID)
 }
 
 func (w *Wallet) GetAccountBasic(ctx context.Context, accountId string) (*AccountRecordBasic, error) {
@@ -46,7 +59,7 @@ func (w *Wallet) UseAccount(ctx context.Context, accountID string) (*Account, er
 		return nil, err
 	}
 	a.blc = blc
-	a.pubkey, err = blc.UnmarshalPubkey(accountBasic.PubKey)
+	a.PublicKey, err = blc.UnmarshalPubkey(accountBasic.PubKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key, caused by:%v", err)
 	}

@@ -11,13 +11,19 @@ import (
 
 type Chain interface {
 	GetContract(addr []byte, contractType string) (interface{}, error)
-	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.ContractTransaction, error)
-	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.ContractTransaction, error)
-	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
-	WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error
+	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.Transaction, error)
+	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.Transaction, error)
+	ConfirmTrans(ctx context.Context, trans *transaction.Transaction, sig []byte) error
+	WaitMined(ctx context.Context, trans *transaction.Transaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
+	BalanceAtICST(ctx context.Context, addr []byte) (*big.Int, error)
 	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
 	UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error)
+	MarshalPubKey(pub *ecdsa.PublicKey) string
+	GenerateKey(ctx context.Context) (*ecdsa.PrivateKey, error)
+	Sign(hash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error)
+	Transfer(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
+	TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 }
 
 // ChainType defines the type of underlying blockchain
