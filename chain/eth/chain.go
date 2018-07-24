@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	// "github.com/ethereum/go-ethereum"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 
@@ -42,33 +42,33 @@ var ErrorUnknownContractType = errors.New("unknown contract type")
 //ErrorMethodNameNotFound indicates the method to call of a contract does not exist
 var ErrorMethodNameNotFound = errors.New("contract method name not found")
 
+type ClientInterface interface {
+	bind.ContractBackend
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
+	StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error)
+	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
+}
+
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
-	contractBackend    bind.ContractBackend
-	deployBackend      bind.DeployBackend
-	contractEvents     chan *chain.ContractEvent
-	chainStateReader   ethereum.ChainStateReader
-	pendingStateReader ethereum.PendingStateReader
+	clientInterface ClientInterface
+	contractEvents  chan *chain.ContractEvent
 }
 
 // NewChainEthereum creates a new Ethereum chain object with an existing ethclient
 func NewChainEthereum(client *ethclient.Client) *ChainEthereum {
 	return &ChainEthereum{
-		contractBackend:    client,
-		deployBackend:      client,
-		contractEvents:     make(chan *chain.ContractEvent, 1024),
-		chainStateReader:   client,
-		pendingStateReader: client,
+		clientInterface: client,
+		contractEvents:  make(chan *chain.ContractEvent, 1024),
 	}
 }
 
 // NewSimChainEthereum creates a new Ethereum chain object with the SimulatedBackend
 func NewSimChainEthereum(backend *backends.SimulatedBackend) *ChainEthereum {
 	return &ChainEthereum{
-		contractBackend:  backend,
-		deployBackend:    backend,
-		contractEvents:   make(chan *chain.ContractEvent, 1024),
-		chainStateReader: backend,
+		clientInterface: backend,
+		contractEvents:  make(chan *chain.ContractEvent, 1024),
 	}
 }
 
@@ -170,11 +170,11 @@ func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed a
 	}
 	fromAddr := common.BytesToAddress(from)
 	var nonce uint64
-	if nonce, err = c.contractBackend.PendingNonceAt(ctx, fromAddr); err != nil {
+	if nonce, err = c.clientInterface.PendingNonceAt(ctx, fromAddr); err != nil {
 		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
 	}
 	var gasPrice *big.Int
-	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+	if gasPrice, err = c.clientInterface.SuggestGasPrice(ctx); err != nil {
 		return nil, fmt.Errorf("failed to suggest gas price: %v", err)
 	}
 	rawTx := types.NewTransaction(nonce, common.BytesToAddress(contractAddr), value, contractCallMethodGasLimit, gasPrice, input)
@@ -213,19 +213,19 @@ func (c *ChainEthereum) createContract(ctx context.Context, from []byte, abi abi
 	bytecode = append(bytecode, input...)
 	fromAddr := common.BytesToAddress(from)
 	var nonce uint64
-	if nonce, err = c.contractBackend.PendingNonceAt(ctx, fromAddr); err != nil {
+	if nonce, err = c.clientInterface.PendingNonceAt(ctx, fromAddr); err != nil {
 		return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
 	}
 	value := new(big.Int)
 	var gasPrice *big.Int
-	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+	if gasPrice, err = c.clientInterface.SuggestGasPrice(ctx); err != nil {
 		return nil, fmt.Errorf("failed to suggest gas price: %v", err)
 	}
 
 	//TODO: gasLimit estimated does not enough for contract creation.
 	// var gasLimit uint64
 	// msg := ethereum.CallMsg{From: fromAddr, To: nil, Value: value, Data: input}
-	// gasLimit, err = c.contractBackend.EstimateGas(ctx, msg)
+	// gasLimit, err = c.clientInterface.EstimateGas(ctx, msg)
 	// if err != nil {
 	// 	return nil, fmt.Errorf("failed to estimate gas needed: %v", err)
 	// }
@@ -269,7 +269,7 @@ func (c *ChainEthereum) ConfirmTrans(ctx context.Context, trans *transaction.Con
 	if !reflect.DeepEqual(sender.Bytes(), trans.Sender()) {
 		return fmt.Errorf("sender's address does not match")
 	}
-	return c.contractBackend.SendTransaction(ctx, rawTx)
+	return c.clientInterface.SendTransaction(ctx, rawTx)
 }
 
 //extractAbiParams retrieves the values for arguments of abi's method, from the contractData object.
@@ -286,7 +286,7 @@ func extractAbiParams(method abi.Method, contractData interface{}) ([]interface{
 
 // getContentContract gets content contract from Ethereum chain with its address.
 func (c *ChainEthereum) getContentContract(addr []byte) (*ConsumeContent, error) {
-	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.contractBackend)
+	ct, err := NewConsumeContent(common.BytesToAddress(addr), c.clientInterface)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func (c *ChainEthereum) getContentContract(addr []byte) (*ConsumeContent, error)
 
 // getSkillContract gets skill contract from Ethereum chain with its address.
 func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
-	ct, err := NewConsumeSkill(common.BytesToAddress(addr), c.contractBackend)
+	ct, err := NewConsumeSkill(common.BytesToAddress(addr), c.clientInterface)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func (c *ChainEthereum) getSkillContract(addr []byte) (*ConsumeSkill, error) {
 
 // getICSTContract gets skill contract from Ethereum chain with its address.
 func (c *ChainEthereum) getICSTContract(addr []byte) (*ICST, error) {
-	ct, err := NewICST(common.BytesToAddress(addr), c.contractBackend)
+	ct, err := NewICST(common.BytesToAddress(addr), c.clientInterface)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +315,7 @@ func (c *ChainEthereum) getICSTContract(addr []byte) (*ICST, error) {
 
 //WaitMined blocks the caller until the transaction is mined, or gets an error
 func (c *ChainEthereum) WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error {
-	receipt, err := bind.WaitMined(ctx, c.deployBackend, trans.RawTx().(*types.Transaction))
+	receipt, err := bind.WaitMined(ctx, c.clientInterface, trans.RawTx().(*types.Transaction))
 	if err != nil {
 		return fmt.Errorf("wait mined returns error:%v", err)
 	}
@@ -332,7 +332,7 @@ func (c *ChainEthereum) WaitMined(ctx context.Context, trans *transaction.Contra
 //WaitContractDeployed blocks the caller untile the transactio to create a contract is mined, or gets an error.
 //The difference with WaitMined is that it also make sure the contrace code is not empty.
 func (c *ChainEthereum) WaitContractDeployed(ctx context.Context, tx interface{}) (common.Address, error) {
-	return bind.WaitDeployed(ctx, c.deployBackend, tx.(*types.Transaction))
+	return bind.WaitDeployed(ctx, c.clientInterface, tx.(*types.Transaction))
 }
 
 func (c *ChainEthereum) watchEvent(ctx context.Context, contractDeployed *ConsumeSkill, stateChan chan<- *ConsumeSkillStateChange) (event.Subscription, error) {
@@ -348,7 +348,7 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 		return nil, err
 	}
 
-	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abi, c.contractBackend, c.contractBackend, c.contractBackend)
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abi, c.clientInterface, c.clientInterface, c.clientInterface)
 	opts := new(bind.WatchOpts)
 	opts.Context = ctx
 	//watch from the latest block
@@ -394,7 +394,14 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 }
 
 func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, error) {
+	b, err := c.clientInterface.BalanceAt(ctx, common.BytesToAddress(addr), nil)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
 
+func (c *ChainEthereum) BalanceAtICST(ctx context.Context, addr []byte) (*big.Int, error) {
 	cxToken, err := c.GetContract(common.Hex2Bytes(ICSTAddr), "ICST")
 	if err != nil {
 		return nil, err
@@ -469,11 +476,11 @@ func (c *ChainEthereum) Transfer(ctx context.Context, from []byte, to []byte, va
 	toAddr := common.BytesToAddress(to)
 	fmt.Printf("fromAddr, to, value: %v %v %v\n", fromAddr.Hex(), toAddr.Hex(), value)
 	var nonce uint64
-	if nonce, err = c.pendingStateReader.PendingNonceAt(ctx, fromAddr); err != nil {
+	if nonce, err = c.clientInterface.PendingNonceAt(ctx, fromAddr); err != nil {
 		return fmt.Errorf("failed to retrieve account nonce: %v", err)
 	}
 	var gasPrice *big.Int
-	if gasPrice, err = c.contractBackend.SuggestGasPrice(ctx); err != nil {
+	if gasPrice, err = c.clientInterface.SuggestGasPrice(ctx); err != nil {
 		return fmt.Errorf("failed to suggest gas price: %v", err)
 	}
 	// new transaction
@@ -496,13 +503,13 @@ func (c *ChainEthereum) Transfer(ctx context.Context, from []byte, to []byte, va
 	}
 
 	// submit to txpool
-	err = c.contractBackend.SendTransaction(ctx, signedTx)
+	err = c.clientInterface.SendTransaction(ctx, signedTx)
 	if err != nil {
 		return err
 	}
 
 	// wait to mine
-	receipt, err := bind.WaitMined(ctx, c.deployBackend, signedTx)
+	receipt, err := bind.WaitMined(ctx, c.clientInterface, signedTx)
 	if err != nil {
 		return fmt.Errorf("wait mined returns error:%v", err)
 	}

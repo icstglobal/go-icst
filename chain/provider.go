@@ -16,6 +16,7 @@ type Chain interface {
 	ConfirmTrans(ctx context.Context, trans *transaction.ContractTransaction, sig []byte) error
 	WaitMined(ctx context.Context, trans *transaction.ContractTransaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
+	BalanceAtICST(ctx context.Context, addr []byte) (*big.Int, error)
 	PubKeyToAddress(pub *ecdsa.PublicKey) []byte
 	UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error)
 	MarshalPubKey(pub *ecdsa.PublicKey) string

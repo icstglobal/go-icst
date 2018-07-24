@@ -37,22 +37,16 @@ func TestConsumeSkillContract(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{contractBackend: simBackend, deployBackend: simBackend}
-	contractData := struct {
-		PHash      string
-		PPublisher []byte //common.Address
-		PPlatform  []byte //common.Address
-		PConsumer  []byte //common.Address
-		PPrice     uint32
-		PRatio     uint8
-	}{
-		PHash:      "hash",
-		PPublisher: ownerAddr.Bytes(),
-		PPlatform:  ownerAddr.Bytes(),
-		PConsumer:  ownerAddr.Bytes(),
-		PPrice:     1,
-		PRatio:     50,
+	chain := &ChainEthereum{clientInterface: simBackend}
+	contractData := map[string]interface{}{
+		"pHash":      "hash",
+		"pPublisher": ownerAddr,
+		"pPlatform":  ownerAddr,
+		"pConsumer":  ownerAddr,
+		"pPrice":     uint32(1),
+		"pRatio":     uint8(50),
 	}
+
 	//start a miner goroutine
 	go func() {
 		//mine after 2 seconds
@@ -88,10 +82,10 @@ func TestConsumeSkillContract(t *testing.T) {
 	}
 	t.Log("transaction mined")
 	var sc *ConsumeSkill
-	if contractData, err := chain.GetContract(ct.ContractAddr, "Skill"); err != nil {
+	if contract, err := chain.GetContract(ct.ContractAddr, "Skill"); err != nil {
 		t.Fatal(err)
 	} else {
-		sc = contractData.(*ConsumeSkill)
+		sc = contract.(*ConsumeSkill)
 	}
 
 	events := make(chan *ConsumeSkillStateChange, 128)
@@ -103,7 +97,7 @@ func TestConsumeSkillContract(t *testing.T) {
 	//call contract.Start
 	t.Log("call contract")
 	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
-	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
+	transOpts.Value = new(big.Int).SetUint64(uint64(contractData["pPrice"].(uint32)))
 	_, err = sc.Start(transOpts)
 	if err != nil {
 		t.Fatal(err)
@@ -132,19 +126,13 @@ func TestConsumeContentContract(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{contractBackend: simBackend, deployBackend: simBackend}
-	contractData := struct {
-		PPublisher []byte
-		PPlatform  []byte
-		PConsumer  []byte
-		PPrice     uint32
-		PRatio     uint8
-	}{
-		PPublisher: ownerAddr.Bytes(),
-		PPlatform:  ownerAddr.Bytes(),
-		PConsumer:  ownerAddr.Bytes(),
-		PPrice:     1,
-		PRatio:     50,
+	chain := &ChainEthereum{clientInterface: simBackend}
+	contractData := map[string]interface{}{
+		"pPublisher": ownerAddr,
+		"pPlatform":  ownerAddr,
+		"pConsumer":  ownerAddr,
+		"pPrice":     uint32(1),
+		"pRatio":     uint8(50),
 	}
 	//start a miner goroutine
 	go func() {
@@ -204,7 +192,7 @@ func TestConsumeContentContract(t *testing.T) {
 		fmt.Println("quit event loop")
 	}()
 
-	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", new(big.Int).SetUint64(uint64(contractData.PPrice)), contractData)
+	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", new(big.Int).SetUint64(uint64(contractData["pPrice"].(uint32))), contractData)
 	if err != nil {
 		t.Fatal("failed to call method", err)
 	}
@@ -366,20 +354,13 @@ func TestExtractAbiParams(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	contractData := struct {
-		PHash      string
-		PPublisher []byte
-		PPlatform  []byte
-		PConsumer  []byte
-		PPrice     uint32
-		PRatio     uint8
-	}{
-		PHash:      "hash",
-		PPublisher: common.Address{}.Bytes(),
-		PPlatform:  common.Address{}.Bytes(),
-		PConsumer:  common.Address{}.Bytes(),
-		PPrice:     10,
-		PRatio:     50,
+	contractData := map[string]interface{}{
+		"PHash":      "hash",
+		"PPublisher": common.Address{}.Bytes(),
+		"PPlatform":  common.Address{}.Bytes(),
+		"PConsumer":  common.Address{}.Bytes(),
+		"PPrice":     10,
+		"PRatio":     50,
 	}
 	args, err := extractAbiParams(parsed.Constructor, contractData)
 	if err != nil {
@@ -399,9 +380,9 @@ func TestMarshalPublicKey(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{contractBackend: simBackend, deployBackend: simBackend}
+	chain := &ChainEthereum{clientInterface: simBackend}
 
-	buf := chain.MarshalPublicKey(&ownerKey.PublicKey)
+	buf := chain.MarshalPubKey(&ownerKey.PublicKey)
 	keyCopy, err := chain.UnmarshalPubkey(buf)
 	if err != nil {
 		t.Fatal(err)
