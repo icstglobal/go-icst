@@ -115,7 +115,7 @@ func main() {
 	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
 	transOpts.GasLimit = 200000
 	tx, err := sc.Consume(transOpts)
-	ctConsume := transaction.NewContractTransaction(tx, ownerAddr.Bytes())
+	ctConsume := transaction.NewTransaction(tx, ownerAddr.Bytes())
 	err = blc.WaitMined(context.Background(), ctConsume)
 	if err != nil {
 		log.Fatal(err)

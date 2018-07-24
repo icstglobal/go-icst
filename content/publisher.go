@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/icstglobal/go-icst/metadata"
 	"github.com/icstglobal/go-icst/transaction"
 
@@ -20,23 +21,19 @@ func NewPublisher(chain chain.Chain, store metadata.Store) *Publisher {
 	return &Publisher{chain, store}
 }
 
-func (p *Publisher) Pub(ctx context.Context, sender []byte, data map[string]interface{}) (*transaction.ContractTransaction, error) {
-	//field names of this struct should match the args of underlying smart contract's constructor
-	contractData := struct {
-		PHash      string
-		PPublisher []byte
-		PPlatform  []byte
-		PPrice     uint32
-		PRatio     uint8
-	}{
-		PHash:      data["PHash"].(string),
-		PPublisher: data["PPublisher"].([]byte),
-		PPlatform:  data["PPlatform"].([]byte),
-
-		PPrice: data["PPrice"].(uint32),
-		PRatio: data["PRatio"].(uint8),
+func (p *Publisher) Pub(ctx context.Context, sender []byte, data map[string]interface{}) (*transaction.Transaction, error) {
+	if pPublisher, ok := data["pPublisher"]; ok {
+		data["pPublisher"] = common.HexToAddress(pPublisher.(string))
 	}
-	trans, err := p.c.NewContract(ctx, sender, string(chain.ContentContractType), contractData)
+	if pPlatform, ok := data["pPlatform"]; ok {
+		data["pPlatform"] = common.HexToAddress(pPlatform.(string))
+	}
+	if pConsumer, ok := data["pConsumer"]; ok {
+		data["pConsumer"] = common.HexToAddress(pConsumer.(string))
+	}
+
+	//field names of this struct should match the args of underlying smart contract's constructor
+	trans, err := p.c.NewContract(ctx, sender, string(chain.ContentContractType), data)
 	if err != nil {
 		log.Println("failed to publish content contract, ", err)
 		return nil, err

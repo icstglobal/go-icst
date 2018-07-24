@@ -72,7 +72,7 @@ func (a *Account) Addr() []byte {
 }
 
 // CreateContentContractTrans creates contract transaction
-func (a *Account) CreateContentContractTrans(ctx context.Context, data map[string]interface{}) (*transaction.ContractTransaction, error) {
+func (a *Account) CreateContentContractTrans(ctx context.Context, data map[string]interface{}) (*transaction.Transaction, error) {
 	ownerAddr := a.Addr()
 	publisher := content.NewPublisher(a.blc, nil)
 	trans, err := publisher.Pub(context.Background(), ownerAddr, data)
@@ -85,7 +85,7 @@ func (a *Account) CreateContentContractTrans(ctx context.Context, data map[strin
 
 // AfterSign process after client sign
 // including confirm transaction and wait for mining
-func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.ContractTransaction) error {
+func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transaction.Transaction) error {
 	sig, err := hex.DecodeString(sigHex)
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func (a *Account) AfterSign(ctx context.Context, sigHex string, trans *transacti
 }
 
 // Create Contract Transaction
-func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, data map[string]interface{}) (*transaction.ContractTransaction, error) {
+func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, data map[string]interface{}) (*transaction.Transaction, error) {
 	ownerAddr := a.Addr()
 	method := data["Method"].(string)
 	price := data["Price"].(int)
