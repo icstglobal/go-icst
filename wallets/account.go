@@ -123,3 +123,13 @@ func (a *Account) CallContentContract(ctx context.Context, cxAddrStr string, dat
 func (a *Account) GetBlc() chain.Chain {
 	return a.blc
 }
+
+//Transfer generate the transaction to transfer
+func (a *Account) Transfer(ctx context.Context, to []byte, val *big.Int) (*transaction.Transaction, error) {
+	return a.blc.Transfer(ctx, a.Addr(), to, val)
+}
+
+//TransferICST generate the transaction to transfer ICST
+func (a *Account) TransferICST(ctx context.Context, to []byte, val *big.Int) (*transaction.Transaction, error) {
+	return a.blc.TransferICST(ctx, a.Addr(), to, val)
+}
