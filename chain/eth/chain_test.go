@@ -37,7 +37,7 @@ func TestConsumeSkillContract(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{clientInterface: simBackend}
+	chain := NewSimChainEthereum(simBackend)
 	contractData := map[string]interface{}{
 		"pHash":      "hash",
 		"pPublisher": ownerAddr,
@@ -82,7 +82,7 @@ func TestConsumeSkillContract(t *testing.T) {
 	}
 	t.Log("transaction mined")
 	var sc *ConsumeSkill
-	if contract, err := chain.GetContract(ct.ContractAddr, "Skill"); err != nil {
+	if contract, err := chain.GetContract(ct.To, "Skill"); err != nil {
 		t.Fatal(err)
 	} else {
 		sc = contract.(*ConsumeSkill)
@@ -126,7 +126,7 @@ func TestConsumeContentContract(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{clientInterface: simBackend}
+	chain := NewSimChainEthereum(simBackend)
 	contractData := map[string]interface{}{
 		"pPublisher": ownerAddr,
 		"pPlatform":  ownerAddr,
@@ -148,7 +148,7 @@ func TestConsumeContentContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
+	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.To), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
 
 	//sign the transaction locally, without send private key to the remote
 	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
@@ -176,7 +176,7 @@ func TestConsumeContentContract(t *testing.T) {
 		Count uint32
 	}
 	var rawEvt ConsumeContentEventConsume
-	events, err := chain.WatchContractEvent(context.Background(), ct.ContractAddr, "Content", "EventConsume", reflect.TypeOf(rawEvt))
+	events, err := chain.WatchContractEvent(context.Background(), ct.To, "Content", "EventConsume", reflect.TypeOf(rawEvt))
 	if err != nil {
 		t.Fatal("failed to watch event", err)
 	}
@@ -192,7 +192,7 @@ func TestConsumeContentContract(t *testing.T) {
 		fmt.Println("quit event loop")
 	}()
 
-	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", new(big.Int).SetUint64(uint64(contractData["pPrice"].(uint32))), contractData)
+	ct, err = chain.Call(context.Background(), ownerAddr.Bytes(), "Content", ct.To, "consume", new(big.Int).SetUint64(uint64(contractData["pPrice"].(uint32))), contractData)
 	if err != nil {
 		t.Fatal("failed to call method", err)
 	}
@@ -211,7 +211,7 @@ func TestConsumeContentContract(t *testing.T) {
 	simBackend.Commit()
 
 	var sc *ConsumeContent
-	if contractData, err := chain.GetContract(ct.ContractAddr, "Content"); err != nil {
+	if contractData, err := chain.GetContract(ct.To, "Content"); err != nil {
 		t.Fatal(err)
 	} else {
 		sc = contractData.(*ConsumeContent)
@@ -269,7 +269,7 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
+	t.Log("contract deployment transaction created", common.Bytes2Hex(ct.To), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
 
 	//sign the transaction locally, without send private key to the remote
 	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
@@ -293,7 +293,7 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	}
 	t.Log("transaction deployed")
 
-	contractAddr := ct.ContractAddr
+	contractAddr := ct.To
 	// contractAddr := common.HexToAddress("c8828443845797748be043690ae1060193f085f9").Bytes()
 
 	t.Log("watchevent")
@@ -380,7 +380,7 @@ func TestMarshalPublicKey(t *testing.T) {
 
 	simBackend := backends.NewSimulatedBackend(alloc)
 	t.Log("sim backend created")
-	chain := &ChainEthereum{clientInterface: simBackend}
+	chain := NewSimChainEthereum(simBackend)
 
 	buf := chain.MarshalPubKey(&ownerKey.PublicKey)
 	keyCopy, err := chain.UnmarshalPubkey(buf)
