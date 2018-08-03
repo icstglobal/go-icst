@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -40,15 +41,6 @@ var ErrorUnknownContractType = errors.New("unknown contract type")
 
 //ErrorMethodNameNotFound indicates the method to call of a contract does not exist
 var ErrorMethodNameNotFound = errors.New("contract method name not found")
-
-type ClientInterface interface {
-	bind.ContractBackend
-	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
-	BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error)
-	StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error)
-	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
-	ethereum.ChainReader
-}
 
 // ChainEthereum is a wrapper for ethereum client
 type ChainEthereum struct {
@@ -402,6 +394,7 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 	return c.contractEvents, nil
 }
 
+//BalanceAt returns the balance of an account
 func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, error) {
 	b, err := c.chainStateReader.BalanceAt(ctx, common.BytesToAddress(addr), nil)
 	if err != nil {
@@ -410,6 +403,7 @@ func (c *ChainEthereum) BalanceAt(ctx context.Context, addr []byte) (*big.Int, e
 	return b, nil
 }
 
+//BalanceAtICST returns the ICST balance of an account
 func (c *ChainEthereum) BalanceAtICST(ctx context.Context, addr []byte) (*big.Int, error) {
 	cxToken, err := c.GetContract(common.Hex2Bytes(ICSTAddr), "ICST")
 	if err != nil {
@@ -423,6 +417,7 @@ func (c *ChainEthereum) BalanceAtICST(ctx context.Context, addr []byte) (*big.In
 	return b, nil
 }
 
+//PubKeyToAddress convert public key to chain specific address
 func (c *ChainEthereum) PubKeyToAddress(pub *ecdsa.PublicKey) []byte {
 	return ethcrypto.PubkeyToAddress(*pub).Bytes()
 }
@@ -574,6 +569,73 @@ func (c *ChainEthereum) WatchBlocks(ctx context.Context, blockStart *big.Int) (<
 		}
 	}()
 	return blocks, errors
+}
+
+//WatchICSTTransfer loops for the blocks just like WatchBlocks, but filter out block's transactions not transferring ICST.
+//Transactions in block are also different, `to` and `amount` has been change to the ICST receiver and amount.
+func (c *ChainEthereum) WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error) {
+	icstErrors := make(chan error, 1)
+	icstBlocks := make(chan *transaction.Block, 8)
+	icstAbi, _ := abi.JSON(strings.NewReader(ICSTABI))
+
+	blocks, errors := c.WatchBlocks(ctx, blockStart)
+	go func() {
+		for {
+			select {
+			case b := <-blocks:
+				nb := &transaction.Block{}
+				nb.BlockNumber = b.BlockNumber
+				nb.Hash = b.Hash
+				nb.Trans = b.Trans[:0]
+				for _, tx := range b.Trans {
+					if tx.To == nil || len(tx.To) == 0 || len(tx.Data) == 0 || hex.EncodeToString(tx.To) != ICSTAddr {
+						//ignore any transaction not related to ICST ERC20 token transfer
+						continue
+					}
+
+					//check if call icst.Transfer
+					method, err := icstAbi.MethodById(tx.Data)
+					if err != nil || method.Name != "transfer" {
+						//ignore
+						continue
+					}
+
+					args, err := method.Inputs.UnpackValues(tx.Data[4:])
+					if err != nil {
+						icstErrors <- fmt.Errorf("failed to parse transfer args, tx.Hash:%v, inner error:%v", tx.Hash, err)
+						continue
+					}
+
+					receipt, err := c.deployBackend.TransactionReceipt(ctx, common.HexToHash(tx.Hash))
+					if err != nil {
+						icstErrors <- fmt.Errorf("failed to get tx receipt, tx.Hash:%v, inner error:%v", tx.Hash, err)
+						continue
+					}
+
+					to := args[0].(common.Address)
+					amount := args[1].(*big.Int)
+					ntx := &transaction.Message{}
+					ntx.Hash = tx.Hash
+					ntx.From = tx.From
+					ntx.To = to.Bytes()
+					ntx.Amount = amount
+					ntx.CheckNonce = tx.CheckNonce
+					ntx.GasLimit = tx.GasLimit
+					ntx.GasPrice = tx.GasPrice
+					ntx.Nonce = tx.Nonce
+					ntx.Success = (receipt.Status == 1)
+					ntx.GasUsed = receipt.GasUsed
+
+					nb.Trans = append(nb.Trans, ntx)
+				}
+
+				icstBlocks <- nb
+			case err := <-errors:
+				icstErrors <- err
+			}
+		}
+	}()
+	return icstBlocks, icstErrors
 }
 
 func signer() types.Signer {

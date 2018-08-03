@@ -25,6 +25,7 @@ type Chain interface {
 	Transfer(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 	TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
+	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 }
 
 // ChainType defines the type of underlying blockchain
