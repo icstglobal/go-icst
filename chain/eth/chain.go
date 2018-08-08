@@ -454,8 +454,7 @@ func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	pubKey := ethcrypto.ToECDSAPub(buf)
-	return pubKey, nil
+	return ethcrypto.UnmarshalPubkey(buf)
 }
 
 //MarshalPubKey convert a public key to base 64 string
