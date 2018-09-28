@@ -150,6 +150,11 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 			return nil, err
 		}
 		break
+	case "Plasma":
+		if abiParsed, err = abi.JSON(strings.NewReader(RootChainABI)); err != nil {
+			return nil, err
+		}
+		break
 	default:
 		return nil, ErrorUnknownContractType
 	}
@@ -674,4 +679,10 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 		block.Trans = append(block.Trans, tm)
 	}
 	return block, nil
+}
+
+//Deposit token to contract
+func (c *ChainEthereum) Deposit(ctx context.Context, from []byte, value *big.Int) (*transaction.Transaction, error) {
+	callData := map[string]interface{}{}
+	return c.Call(ctx, from, "Plasma", common.Hex2Bytes(RootChainAddr), "deposit", value, callData)
 }
