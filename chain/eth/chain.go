@@ -150,13 +150,21 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 			return nil, err
 		}
 		break
-	case "Plasma":
-		if abiParsed, err = abi.JSON(strings.NewReader(RootChainABI)); err != nil {
-			return nil, err
-		}
-		break
 	default:
 		return nil, ErrorUnknownContractType
+	}
+	return c.callMethod(ctx, from, abiParsed, contractAddr, methodName, value, callData)
+}
+
+// CallWithAbi inits a transaction to call a contract method
+// The transaction is not sent out yet and must be confirmed later by sender
+// param "value" is the money to sent to the transaction address
+// param "callData" is a container of all the args needed for method
+func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
+	var abiParsed abi.ABI
+	var err error
+	if abiParsed, err = abi.JSON(strings.NewReader(abiStr)); err != nil {
+		return nil, err
 	}
 	return c.callMethod(ctx, from, abiParsed, contractAddr, methodName, value, callData)
 }
@@ -679,10 +687,4 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 		block.Trans = append(block.Trans, tm)
 	}
 	return block, nil
-}
-
-//Deposit token to contract
-func (c *ChainEthereum) Deposit(ctx context.Context, from []byte, value *big.Int) (*transaction.Transaction, error) {
-	callData := map[string]interface{}{}
-	return c.Call(ctx, from, "Plasma", common.Hex2Bytes(RootChainAddr), "deposit", value, callData)
 }

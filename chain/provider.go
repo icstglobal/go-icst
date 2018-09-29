@@ -13,6 +13,7 @@ type Chain interface {
 	GetContract(addr []byte, contractType string) (interface{}, error)
 	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.Transaction, error)
 	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.Transaction, error)
+	CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error)
 	ConfirmTrans(ctx context.Context, trans *transaction.Transaction, sig []byte) error
 	WaitMined(ctx context.Context, trans *transaction.Transaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
@@ -26,10 +27,6 @@ type Chain interface {
 	TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
-	Plasma
-}
-type Plasma interface {
-	Deposit(ctx context.Context, from []byte, value *big.Int) (*transaction.Transaction, error)
 }
 
 // ChainType defines the type of underlying blockchain
