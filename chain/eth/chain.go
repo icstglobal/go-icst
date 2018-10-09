@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/icstglobal/go-icst/chain"
+	icstcommon "github.com/icstglobal/go-icst/common"
 	"github.com/icstglobal/go-icst/transaction"
 )
 
@@ -35,6 +36,9 @@ const contractDeploymentTimeout = 20 * time.Second
 const contractCreationGasLimit uint64 = 1000000
 const contractCallMethodGasLimit uint64 = 500000
 const transferGasLimit uint64 = 1000000
+
+// abi cache
+var abiCache = map[[32]byte]abi.ABI{}
 
 //ErrorUnknownContractType indicates an unsupported contract type
 var ErrorUnknownContractType = errors.New("unknown contract type")
@@ -161,12 +165,11 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 // param "value" is the money to sent to the transaction address
 // param "callData" is a container of all the args needed for method
 func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
-	var abiParsed abi.ABI
-	var err error
-	if abiParsed, err = abi.JSON(strings.NewReader(abiStr)); err != nil {
+	_abi, err := getAbiFromCache(abiStr)
+	if err != nil {
 		return nil, err
 	}
-	return c.callMethod(ctx, from, abiParsed, contractAddr, methodName, value, callData)
+	return c.callMethod(ctx, from, _abi, contractAddr, methodName, value, callData)
 }
 
 func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed abi.ABI, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.Transaction, error) {
@@ -460,6 +463,15 @@ func getAbi(contractType string) (abi.ABI, error) {
 	return abiParsed, nil
 }
 
+func getAbiFromStr(abiStr string) (abi.ABI, error) {
+	var abiParsed abi.ABI
+	var err error
+	if abiParsed, err = abi.JSON(strings.NewReader(abiStr)); err != nil {
+		return abi.ABI{}, err
+	}
+	return abiParsed, nil
+}
+
 // UnmarshalPubkey converts base64 string to a secp256k1 public key.
 func (c *ChainEthereum) UnmarshalPubkey(pub string) (*ecdsa.PublicKey, error) {
 
@@ -687,4 +699,44 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 		block.Trans = append(block.Trans, tm)
 	}
 	return block, nil
+}
+
+//GetEvents listening on the events from contract, and wrap it in a general contract event struct
+//It returns error if the given event if not found by name
+func (c *ChainEthereum) GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]types.Log, error) {
+	query := ethereum.FilterQuery{FromBlock: fromBlock, Topics: topics}
+	logs, err := c.contractBackend.FilterLogs(ctx, query)
+	if err != nil {
+		fmt.Printf("FilterLogs: %v", err)
+		return nil, err
+	}
+	return logs, nil
+}
+func (c *ChainEthereum) UnpackLog(abiStr string, out interface{}, eventName string, log types.Log) error {
+	_abi, err := getAbiFromCache(abiStr)
+	if err != nil {
+		return err
+	}
+
+	ctr := bind.NewBoundContract(common.Address{}, _abi, c.contractBackend, c.contractBackend, c.contractBackend)
+	err = ctr.UnpackLog(out, eventName, log)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func getAbiFromCache(abiStr string) (abi.ABI, error) {
+	abiHash := icstcommon.Hash([]byte(abiStr))
+	var _abi abi.ABI
+	_abi, ok := abiCache[abiHash]
+	if !ok {
+		_abi, err := getAbiFromStr(abiStr)
+		if err != nil {
+			return _abi, err
+		}
+		abiCache[abiHash] = _abi
+	}
+	return _abi, nil
+
 }

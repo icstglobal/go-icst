@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/icstglobal/go-icst/transaction"
 )
 
@@ -27,6 +29,9 @@ type Chain interface {
 	TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
+
+	GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]types.Log, error)
+	UnpackLog(abiStr string, out interface{}, event string, log types.Log) error
 }
 
 // ChainType defines the type of underlying blockchain
