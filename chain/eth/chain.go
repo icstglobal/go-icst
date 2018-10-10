@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/icstglobal/go-icst/chain"
+	icstcommon "github.com/icstglobal/go-icst/common"
 	"github.com/icstglobal/go-icst/transaction"
 )
 
@@ -35,6 +36,9 @@ const contractDeploymentTimeout = 20 * time.Second
 const contractCreationGasLimit uint64 = 1000000
 const contractCallMethodGasLimit uint64 = 500000
 const transferGasLimit uint64 = 1000000
+
+// abi cache
+var abiCache = map[[32]byte]abi.ABI{}
 
 //ErrorUnknownContractType indicates an unsupported contract type
 var ErrorUnknownContractType = errors.New("unknown contract type")
@@ -160,13 +164,12 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 // The transaction is not sent out yet and must be confirmed later by sender
 // param "value" is the money to sent to the transaction address
 // param "callData" is a container of all the args needed for method
-func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
-	var abiParsed abi.ABI
-	var err error
-	if abiParsed, err = abi.JSON(strings.NewReader(abiStr)); err != nil {
+func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
+	_abi, err := getAbiFromCache(abiStr)
+	if err != nil {
 		return nil, err
 	}
-	return c.callMethod(ctx, from, abiParsed, contractAddr, methodName, value, callData)
+	return c.callMethod(ctx, from, _abi, contractAddr, methodName, value, callData)
 }
 
 func (c *ChainEthereum) callMethod(ctx context.Context, from []byte, abiParsed abi.ABI, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.Transaction, error) {
@@ -386,10 +389,14 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 				}
 
 				c.contractEvents <- &chain.ContractEvent{
-					Addr: addr,
-					Name: eventName,
-					T:    eventVType,
-					V:    v,
+					Addr:      addr,
+					Name:      eventName,
+					T:         eventVType,
+					V:         v,
+					BlockNum:  rawLog.BlockNumber,
+					BlockHash: rawLog.BlockHash[:],
+					TxIndex:   uint64(rawLog.TxIndex),
+					TxHash:    rawLog.TxHash[:],
 					Unwatch: func() {
 						var q struct{}
 						quit <- q         //quit the event loop
@@ -405,6 +412,50 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 	}()
 
 	return c.contractEvents, nil
+}
+
+func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*chain.ContractEvent, error) {
+	abi, err := getAbiFromCache(abiString)
+	if err != nil {
+		return nil, err
+	}
+
+	topic := abi.Events[eventName].Id()
+	topics := make([][]common.Hash, 1)
+	topics[0] = append(topics[0], topic)
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.BytesToAddress(addr)},
+		Topics:    topics,
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+	}
+	logs, err := c.contractBackend.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	events := make([]*chain.ContractEvent, 0)
+	for _, rawLog := range logs {
+		v := reflect.New(eventVType).Interface()
+		if err = abi.Events[eventName].Inputs.Unpack(v, rawLog.Data); err != nil {
+			log.Println("[ERROR]failed to parse raw event log,", err)
+			break
+		}
+
+		evt := &chain.ContractEvent{
+			Addr:      addr,
+			Name:      eventName,
+			T:         eventVType,
+			V:         v,
+			BlockNum:  rawLog.BlockNumber,
+			BlockHash: rawLog.BlockHash[:],
+			TxIndex:   uint64(rawLog.TxIndex),
+			TxHash:    rawLog.TxHash[:],
+		}
+		events = append(events, evt)
+	}
+
+	return events, nil
 }
 
 //BalanceAt returns the balance of an account
@@ -456,6 +507,15 @@ func getAbi(contractType string) (abi.ABI, error) {
 		break
 	default:
 		return abi.ABI{}, ErrorUnknownContractType
+	}
+	return abiParsed, nil
+}
+
+func getAbiFromStr(abiStr string) (abi.ABI, error) {
+	var abiParsed abi.ABI
+	var err error
+	if abiParsed, err = abi.JSON(strings.NewReader(abiStr)); err != nil {
+		return abi.ABI{}, err
 	}
 	return abiParsed, nil
 }
@@ -687,4 +747,19 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 		block.Trans = append(block.Trans, tm)
 	}
 	return block, nil
+}
+
+func getAbiFromCache(abiStr string) (abi.ABI, error) {
+	abiHash := icstcommon.Hash([]byte(abiStr))
+	var _abi abi.ABI
+	_abi, ok := abiCache[abiHash]
+	if !ok {
+		_abi, err := getAbiFromStr(abiStr)
+		if err != nil {
+			return _abi, err
+		}
+		abiCache[abiHash] = _abi
+	}
+	return _abi, nil
+
 }

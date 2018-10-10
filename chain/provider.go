@@ -13,7 +13,7 @@ type Chain interface {
 	GetContract(addr []byte, contractType string) (interface{}, error)
 	NewContract(ctx context.Context, from []byte, contractType string, contractData interface{}) (*transaction.Transaction, error)
 	Call(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}) (*transaction.Transaction, error)
-	CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error)
+	CallWithAbi(ctx context.Context, from []byte, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error)
 	ConfirmTrans(ctx context.Context, trans *transaction.Transaction, sig []byte) error
 	WaitMined(ctx context.Context, trans *transaction.Transaction) error
 	BalanceAt(ctx context.Context, addr []byte) (*big.Int, error)
@@ -27,6 +27,8 @@ type Chain interface {
 	TransferICST(ctx context.Context, from []byte, to []byte, value *big.Int) (*transaction.Transaction, error)
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
+
+	GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*ContractEvent, error)
 }
 
 // ChainType defines the type of underlying blockchain
@@ -47,9 +49,13 @@ const (
 )
 
 type ContractEvent struct {
-	Addr    []byte       //contract address
-	Name    string       //event name
-	T       reflect.Type //type of underlying chain specific contract event
-	V       interface{}  //underlying chain specific contract event
-	Unwatch func()       //unwatch the event at any time
+	Addr      []byte       //contract address
+	Name      string       //event name
+	T         reflect.Type //type of underlying chain specific contract event
+	V         interface{}  //underlying chain specific contract event
+	BlockNum  uint64
+	BlockHash []byte
+	TxIndex   uint64
+	TxHash    []byte
+	Unwatch   func() //unwatch the event at any time
 }

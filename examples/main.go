@@ -59,9 +59,9 @@ func main() {
 	simBackend.Commit()
 
 	simChain.WaitMined(context.Background(), ct)
-	log.Printf("smart contract deployed to address:%v\n", ct.ContractAddr)
+	log.Printf("smart contract deployed to address:%v\n", ct.To)
 
-	ctr, err := simChain.GetContract(ct.ContractAddr, string(chain.ContentContractType))
+	ctr, err := simChain.GetContract(ct.To, string(chain.ContentContractType))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func main() {
 	fmt.Printf("count:%v\n", cnt) //output:0
 
 	callData := new(struct{})
-	ct, err = simChain.Call(context.TODO(), ownerAddr.Bytes(), "Content", ct.ContractAddr, "consume", big.NewInt(int64(opts.Price)), callData)
+	ct, err = simChain.Call(context.TODO(), ownerAddr.Bytes(), "Content", ct.To, "consume", big.NewInt(int64(opts.Price)), callData)
 	sig, err = crypto.Sign(ct.Hash(), owner.PrivateKey)
 	if err != nil {
 		log.Fatal("failed to sign a transaction", err)
@@ -102,6 +102,6 @@ func SimChain(accounts []*user.User) (chain.Chain, *backends.SimulatedBackend, e
 		alloc[crypto.PubkeyToAddress(u.PrivateKey.PublicKey)] = core.GenesisAccount{Balance: big.NewInt(133700000)}
 	}
 
-	simBackend := backends.NewSimulatedBackend(alloc)
+	simBackend := backends.NewSimulatedBackend(alloc, 1000000)
 	return eth.NewSimChainEthereum(simBackend), simBackend, nil
 }
