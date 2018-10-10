@@ -389,10 +389,14 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 				}
 
 				c.contractEvents <- &chain.ContractEvent{
-					Addr: addr,
-					Name: eventName,
-					T:    eventVType,
-					V:    v,
+					Addr:      addr,
+					Name:      eventName,
+					T:         eventVType,
+					V:         v,
+					BlockNum:  rawLog.BlockNumber,
+					BlockHash: rawLog.BlockHash[:],
+					TxIndex:   uint64(rawLog.TxIndex),
+					TxHash:    rawLog.TxHash[:],
 					Unwatch: func() {
 						var q struct{}
 						quit <- q         //quit the event loop
@@ -408,6 +412,51 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 	}()
 
 	return c.contractEvents, nil
+}
+
+func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*chain.ContractEvent, error) {
+	abi, err := getAbiFromCache(abiString)
+	if err != nil {
+		return nil, err
+	}
+
+	topic := abi.Events[eventName].Id()
+	topics := make([][]common.Hash, 1)
+	topics[0] = append(topics[0], topic)
+
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{common.BytesToAddress(addr)},
+		Topics:    topics,
+		FromBlock: fromBlock,
+		ToBlock:   toBlock,
+	}
+	logs, err := c.contractBackend.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	events := make([]*chain.ContractEvent, 0)
+	for _, rawLog := range logs {
+		v := reflect.New(eventVType).Interface()
+		if err = abi.Events[eventName].Inputs.Unpack(v, rawLog.Data); err != nil {
+			// if err = unpack(abi.Events[eventName], v, rawLog.Data); err != nil {
+			log.Println("[ERROR]failed to parse raw event log,", err)
+			break
+		}
+
+		evt := &chain.ContractEvent{
+			Addr:      addr,
+			Name:      eventName,
+			T:         eventVType,
+			V:         v,
+			BlockNum:  rawLog.BlockNumber,
+			BlockHash: rawLog.BlockHash[:],
+			TxIndex:   uint64(rawLog.TxIndex),
+			TxHash:    rawLog.TxHash[:],
+		}
+		events = append(events, evt)
+	}
+
+	return events, nil
 }
 
 //BalanceAt returns the balance of an account

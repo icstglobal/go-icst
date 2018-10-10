@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/icstglobal/go-icst/transaction"
 )
 
@@ -29,7 +28,8 @@ type Chain interface {
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 
-	GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]interface{}, error)
+	// GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]interface{}, error)
+	GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*ContractEvent, error)
 	UnpackLog(abiStr string, out interface{}, event string, log interface{}) error
 }
 
@@ -51,9 +51,13 @@ const (
 )
 
 type ContractEvent struct {
-	Addr    []byte       //contract address
-	Name    string       //event name
-	T       reflect.Type //type of underlying chain specific contract event
-	V       interface{}  //underlying chain specific contract event
-	Unwatch func()       //unwatch the event at any time
+	Addr      []byte       //contract address
+	Name      string       //event name
+	T         reflect.Type //type of underlying chain specific contract event
+	V         interface{}  //underlying chain specific contract event
+	BlockNum  uint64
+	BlockHash []byte
+	TxIndex   uint64
+	TxHash    []byte
+	Unwatch   func() //unwatch the event at any time
 }

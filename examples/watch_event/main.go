@@ -71,7 +71,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("contract deployment transaction created", common.Bytes2Hex(ct.ContractAddr), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
+	log.Println("contract deployment transaction created", common.Bytes2Hex(ct.To), "nonce:", ct.RawTx().(*types.Transaction).Nonce())
 
 	//sign the transaction locally, without send private key to the remote
 	sig, err := crypto.Sign(ct.Hash(), owner.PrivateKey)
@@ -95,7 +95,7 @@ func main() {
 	}
 	log.Println("transaction deployed")
 
-	contractAddr := ct.ContractAddr
+	contractAddr := ct.To
 	var rawEvt eth.ConsumeContentEventConsume
 	log.Println("watchevent")
 	events, err := blc.WatchContractEvent(context.Background(), contractAddr, "Content", "EventConsume", reflect.TypeOf(rawEvt))
