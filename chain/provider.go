@@ -28,9 +28,7 @@ type Chain interface {
 	WatchBlocks(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 	WatchICSTTransfer(ctx context.Context, blockStart *big.Int) (<-chan *transaction.Block, <-chan error)
 
-	// GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]interface{}, error)
 	GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*ContractEvent, error)
-	UnpackLog(abiStr string, out interface{}, event string, log interface{}) error
 }
 
 // ChainType defines the type of underlying blockchain

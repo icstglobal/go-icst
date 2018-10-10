@@ -438,7 +438,6 @@ func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, from
 	for _, rawLog := range logs {
 		v := reflect.New(eventVType).Interface()
 		if err = abi.Events[eventName].Inputs.Unpack(v, rawLog.Data); err != nil {
-			// if err = unpack(abi.Events[eventName], v, rawLog.Data); err != nil {
 			log.Println("[ERROR]failed to parse raw event log,", err)
 			break
 		}
@@ -748,33 +747,6 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 		block.Trans = append(block.Trans, tm)
 	}
 	return block, nil
-}
-
-//GetEvents listening on the events from contract, and wrap it in a general contract event struct
-//It returns error if the given event if not found by name
-func (c *ChainEthereum) GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]interface{}, error) {
-	query := ethereum.FilterQuery{FromBlock: fromBlock, Topics: topics}
-	logs, err := c.contractBackend.FilterLogs(ctx, query)
-	if err != nil {
-		fmt.Printf("FilterLogs: %v", err)
-		return nil, err
-	}
-	_logs := []interface{}{}
-	for _, v := range logs {
-		_logs = append(_logs, v)
-	}
-
-	return _logs, nil
-}
-func (c *ChainEthereum) UnpackLog(abiStr string, out interface{}, eventName string, log interface{}) error {
-	_log := log.(types.Log)
-	_abi, err := getAbiFromCache(abiStr)
-	if err != nil {
-		return err
-	}
-
-	ctr := bind.NewBoundContract(common.Address{}, _abi, c.contractBackend, c.contractBackend, c.contractBackend)
-	return ctr.UnpackLog(out, eventName, _log)
 }
 
 func getAbiFromCache(abiStr string) (abi.ABI, error) {
