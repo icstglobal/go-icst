@@ -164,7 +164,7 @@ func (c *ChainEthereum) Call(ctx context.Context, from []byte, contractType stri
 // The transaction is not sent out yet and must be confirmed later by sender
 // param "value" is the money to sent to the transaction address
 // param "callData" is a container of all the args needed for method
-func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractType string, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
+func (c *ChainEthereum) CallWithAbi(ctx context.Context, from []byte, contractAddr []byte, methodName string, value *big.Int, callData interface{}, abiStr string) (*transaction.Transaction, error) {
 	_abi, err := getAbiFromCache(abiStr)
 	if err != nil {
 		return nil, err
@@ -703,27 +703,29 @@ func parseBlockData(s types.Signer, rawBlock *types.Block) (*transaction.Block, 
 
 //GetEvents listening on the events from contract, and wrap it in a general contract event struct
 //It returns error if the given event if not found by name
-func (c *ChainEthereum) GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]types.Log, error) {
+func (c *ChainEthereum) GetEvents(ctx context.Context, topics [][]common.Hash, fromBlock *big.Int) ([]interface{}, error) {
 	query := ethereum.FilterQuery{FromBlock: fromBlock, Topics: topics}
 	logs, err := c.contractBackend.FilterLogs(ctx, query)
 	if err != nil {
 		fmt.Printf("FilterLogs: %v", err)
 		return nil, err
 	}
-	return logs, nil
+	_logs := []interface{}{}
+	for _, v := range logs {
+		_logs = append(_logs, v)
+	}
+
+	return _logs, nil
 }
-func (c *ChainEthereum) UnpackLog(abiStr string, out interface{}, eventName string, log types.Log) error {
+func (c *ChainEthereum) UnpackLog(abiStr string, out interface{}, eventName string, log interface{}) error {
+	_log := log.(types.Log)
 	_abi, err := getAbiFromCache(abiStr)
 	if err != nil {
 		return err
 	}
 
 	ctr := bind.NewBoundContract(common.Address{}, _abi, c.contractBackend, c.contractBackend, c.contractBackend)
-	err = ctr.UnpackLog(out, eventName, log)
-	if err != nil {
-		return err
-	}
-	return nil
+	return ctr.UnpackLog(out, eventName, _log)
 }
 
 func getAbiFromCache(abiStr string) (abi.ABI, error) {
