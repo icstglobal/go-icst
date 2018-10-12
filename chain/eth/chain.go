@@ -435,9 +435,10 @@ func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, from
 		return nil, err
 	}
 	events := make([]*chain.ContractEvent, 0)
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abi, c.contractBackend, c.contractBackend, c.contractBackend)
 	for _, rawLog := range logs {
 		v := reflect.New(eventVType).Interface()
-		if err = abi.Events[eventName].Inputs.Unpack(v, rawLog.Data); err != nil {
+		if err = ctr.UnpackLog(v, eventName, rawLog); err != nil {
 			log.Println("[ERROR]failed to parse raw event log,", err)
 			break
 		}
