@@ -57,5 +57,5 @@ type ContractEvent struct {
 	BlockHash []byte
 	TxIndex   uint64
 	TxHash    []byte
-	Unwatch   func() //unwatch the event at any time
+	Unwatch   func() `json:"-"` //unwatch the event at any time
 }
