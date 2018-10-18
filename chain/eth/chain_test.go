@@ -35,7 +35,7 @@ func TestConsumeSkillContract(t *testing.T) {
 		alloc[crypto.PubkeyToAddress(u.PrivateKey.PublicKey)] = core.GenesisAccount{Balance: big.NewInt(133700000)}
 	}
 
-	simBackend := backends.NewSimulatedBackend(alloc)
+	simBackend := backends.NewSimulatedBackend(alloc, 1000000)
 	t.Log("sim backend created")
 	chain := NewSimChainEthereum(simBackend)
 	contractData := map[string]interface{}{
@@ -124,7 +124,7 @@ func TestConsumeContentContract(t *testing.T) {
 		alloc[crypto.PubkeyToAddress(u.PrivateKey.PublicKey)] = core.GenesisAccount{Balance: big.NewInt(133700000)}
 	}
 
-	simBackend := backends.NewSimulatedBackend(alloc)
+	simBackend := backends.NewSimulatedBackend(alloc, 1000000)
 	t.Log("sim backend created")
 	chain := NewSimChainEthereum(simBackend)
 	contractData := map[string]interface{}{
@@ -228,6 +228,18 @@ func TestConsumeContentContract(t *testing.T) {
 	t.Log("wait until we get an event...")
 	<-quit
 	t.Log("quit")
+
+	t.Log("try to get contract events")
+	// eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
+	// eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
+	eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, "EventConsume", reflect.TypeOf(rawEvt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range eventsGot {
+		t.Logf("GetContractEvents:event:%#v", e)
+	}
+	t.Log("GetContractEvents:total events count:", len(eventsGot))
 }
 func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
@@ -250,18 +262,12 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 		t.Fatal("failed to connect to eth", err)
 	}
 	t.Log("ethereum node connected")
-	contractData := struct {
-		PPublisher []byte
-		PPlatform  []byte
-		PConsumer  []byte
-		PPrice     uint32
-		PRatio     uint8
-	}{
-		PPublisher: ownerAddr.Bytes(),
-		PPlatform:  ownerAddr.Bytes(),
-		PConsumer:  ownerAddr.Bytes(),
-		PPrice:     1,
-		PRatio:     50,
+	contractData := map[string]interface{}{
+		"pPublisher": ownerAddr,
+		"pPlatform":  ownerAddr,
+		"pConsumer":  ownerAddr,
+		"pPrice":     uint32(1),
+		"pRatio":     uint8(50),
 	}
 
 	t.Log("deploy contract")
@@ -319,9 +325,9 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	}
 
 	transOpts := bind.NewKeyedTransactor(owner.PrivateKey)
-	transOpts.Value = new(big.Int).SetUint64(uint64(contractData.PPrice))
+	transOpts.Value = new(big.Int).SetUint64(uint64(1))
 	transOpts.GasLimit = 2000001
-	var emptyCallData interface{} //consum method needs no input
+	var emptyCallData map[string]interface{} //consum method needs no input
 	ct, err = blc.Call(context.Background(), ownerAddr.Bytes(), "Content", contractAddr, "consume", transOpts.Value, emptyCallData)
 	if err != nil {
 		t.Fatal("failed to call method", err)
@@ -345,8 +351,20 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 	t.Logf("count consumed:%v", cnt.Uint64())
 
 	e := <-events
-	t.Logf("event:%#v", e)
+	t.Logf("WatchContractEvent:event:%#v", e)
+
 	e.Unwatch()
+
+	// eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
+	// eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
+	eventsGot, err := blc.GetContractEvents(context.Background(), contractAddr, new(big.Int), nil, ConsumeContentABI, "EventConsume", reflect.TypeOf(rawEvt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range eventsGot {
+		t.Logf("GetContractEvents:event:%#v", e)
+	}
+	t.Log("GetContractEvents:total events count:", len(eventsGot))
 }
 
 func TestExtractAbiParams(t *testing.T) {
@@ -378,7 +396,7 @@ func TestMarshalPublicKey(t *testing.T) {
 		alloc[crypto.PubkeyToAddress(u.PrivateKey.PublicKey)] = core.GenesisAccount{Balance: big.NewInt(133700000)}
 	}
 
-	simBackend := backends.NewSimulatedBackend(alloc)
+	simBackend := backends.NewSimulatedBackend(alloc, 1000000)
 	t.Log("sim backend created")
 	chain := NewSimChainEthereum(simBackend)
 
