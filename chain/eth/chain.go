@@ -415,12 +415,12 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 }
 
 func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*chain.ContractEvent, error) {
-	abi, err := getAbiFromCache(abiString)
+	abiParsed, err := getAbiFromCache(abiString)
 	if err != nil {
 		return nil, err
 	}
 
-	topic := abi.Events[eventName].Id()
+	topic := abiParsed.Events[eventName].Id()
 	topics := make([][]common.Hash, 1)
 	topics[0] = append(topics[0], topic)
 
@@ -435,7 +435,7 @@ func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, from
 		return nil, err
 	}
 	events := make([]*chain.ContractEvent, 0)
-	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abi, c.contractBackend, c.contractBackend, c.contractBackend)
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abiParsed, c.contractBackend, c.contractBackend, c.contractBackend)
 	for _, rawLog := range logs {
 		v := reflect.New(eventVType).Interface()
 		if err = ctr.UnpackLog(v, eventName, rawLog); err != nil {
@@ -754,13 +754,13 @@ func getAbiFromCache(abiStr string) (abi.ABI, error) {
 	abiHash := icstcommon.Hash([]byte(abiStr))
 	var _abi abi.ABI
 	_abi, ok := abiCache[abiHash]
-	if !ok {
-		_abi, err := getAbiFromStr(abiStr)
-		if err != nil {
-			return _abi, err
-		}
-		abiCache[abiHash] = _abi
+	if ok {
+		return _abi, nil
 	}
-	return _abi, nil
-
+	new_abi, err := getAbiFromStr(abiStr)
+	if err != nil {
+		return abi.ABI{}, err
+	}
+	abiCache[abiHash] = new_abi
+	return new_abi, nil
 }
