@@ -230,9 +230,8 @@ func TestConsumeContentContract(t *testing.T) {
 	t.Log("quit")
 
 	t.Log("try to get contract events")
-	// eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
-	// eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
-	eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, "EventConsume", reflect.TypeOf(rawEvt))
+	eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
+	eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,9 +354,8 @@ func TestConsumeContentContractOnPrivateChain(t *testing.T) {
 
 	e.Unwatch()
 
-	// eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
-	// eventsGot, err := chain.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
-	eventsGot, err := blc.GetContractEvents(context.Background(), contractAddr, new(big.Int), nil, ConsumeContentABI, "EventConsume", reflect.TypeOf(rawEvt))
+	eventTyps := map[string]reflect.Type{"EventConsume": reflect.TypeOf(rawEvt)}
+	eventsGot, err := blc.GetContractEvents(context.Background(), ct.To, new(big.Int), nil, ConsumeContentABI, eventTyps)
 	if err != nil {
 		t.Fatal(err)
 	}
