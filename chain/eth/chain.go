@@ -425,12 +425,17 @@ func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, from
 
 	eventTopicMap := make(map[string]common.Hash)
 	topics := make([][]common.Hash, 0)
+	topic := make([]common.Hash, 0)
+	// query "all" matching events of the same contract, by using topic
+	// {{EventA, EventB}}, instead of
+	// {{EventA}, {EventB}}
 	for eventName := range eventTypes {
-		topic := abiParsed.Events[eventName].Id()
-		topics = append(topics, []common.Hash{topic})
+		eventID := abiParsed.Events[eventName].Id()
+		topic = append(topic, eventID)
 		// track topic for later log parsing
-		eventTopicMap[eventName] = topic
+		eventTopicMap[eventName] = eventID
 	}
+	topics = append(topics, topic)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{common.BytesToAddress(addr)},
