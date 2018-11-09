@@ -132,6 +132,17 @@ func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractTy
 	return c.createContract(ctx, from, parsed, bin, contractData)
 }
 
+// Call without send transaction
+func (c *ChainEthereum) Query(ctx context.Context, addr []byte, abiString string, methodName string, result interface{}, params ...interface{}) error {
+	abiParsed, err := getAbiFromCache(abiString)
+	if err != nil {
+		return err
+	}
+
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abiParsed, c.contractBackend, c.contractBackend, c.contractBackend)
+	return ctr.Call(nil, result, methodName, params...)
+}
+
 // Call inits a transaction to call a contract method
 // The transaction is not sent out yet and must be confirmed later by sender
 // param "value" is the money to sent to the transaction address
