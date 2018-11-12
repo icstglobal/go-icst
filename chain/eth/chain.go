@@ -1,6 +1,7 @@
 package eth
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
@@ -129,6 +130,17 @@ func (c *ChainEthereum) NewContract(ctx context.Context, from []byte, contractTy
 	}
 
 	return c.createContract(ctx, from, parsed, bin, contractData)
+}
+
+// Call without send transaction
+func (c *ChainEthereum) Query(ctx context.Context, addr []byte, abiString string, methodName string, result interface{}, params ...interface{}) error {
+	abiParsed, err := getAbiFromCache(abiString)
+	if err != nil {
+		return err
+	}
+
+	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abiParsed, c.contractBackend, c.contractBackend, c.contractBackend)
+	return ctr.Call(nil, result, methodName, params...)
 }
 
 // Call inits a transaction to call a contract method
@@ -414,15 +426,27 @@ func (c *ChainEthereum) WatchContractEvent(ctx context.Context, addr []byte, con
 	return c.contractEvents, nil
 }
 
-func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventName string, eventVType reflect.Type) ([]*chain.ContractEvent, error) {
+// GetContractEvents returns multiple contract events of the same contract together, with the same order inside block
+// This method ensures that all events needed will be returned, or none of them will be returned if an error happen.
+func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, fromBlock, toBlock *big.Int, abiString string, eventTypes map[string]reflect.Type) ([]*chain.ContractEvent, error) {
 	abiParsed, err := getAbiFromCache(abiString)
 	if err != nil {
 		return nil, err
 	}
 
-	topic := abiParsed.Events[eventName].Id()
-	topics := make([][]common.Hash, 1)
-	topics[0] = append(topics[0], topic)
+	eventTopicMap := make(map[string]common.Hash)
+	topics := make([][]common.Hash, 0)
+	topic := make([]common.Hash, 0)
+	// query "all" matching events of the same contract, by using topic
+	// {{EventA, EventB}}, instead of
+	// {{EventA}, {EventB}}
+	for eventName := range eventTypes {
+		eventID := abiParsed.Events[eventName].Id()
+		topic = append(topic, eventID)
+		// track topic for later log parsing
+		eventTopicMap[eventName] = eventID
+	}
+	topics = append(topics, topic)
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{common.BytesToAddress(addr)},
@@ -434,25 +458,41 @@ func (c *ChainEthereum) GetContractEvents(ctx context.Context, addr []byte, from
 	if err != nil {
 		return nil, err
 	}
+
 	events := make([]*chain.ContractEvent, 0)
 	ctr := bind.NewBoundContract(common.BytesToAddress(addr), abiParsed, c.contractBackend, c.contractBackend, c.contractBackend)
 	for _, rawLog := range logs {
-		v := reflect.New(eventVType).Interface()
-		if err = ctr.UnpackLog(v, eventName, rawLog); err != nil {
-			log.Println("[ERROR]failed to parse raw event log,", err)
-			break
+		var evt *chain.ContractEvent
+		// try event types one by one to see if the log can be pased
+		for eventName, eventVType := range eventTypes {
+			eventTopic := eventTopicMap[eventName]
+			if !bytes.Equal(rawLog.Topics[0][:], eventTopic[:]) {
+				//try next event type
+				continue
+			}
+			v := reflect.New(eventVType).Interface()
+			if err = ctr.UnpackLog(v, eventName, rawLog); err != nil {
+				log.Println("[ERROR]failed to parse raw event log,", err)
+				return nil, err
+			}
+
+			evt = &chain.ContractEvent{
+				Addr:      addr,
+				Name:      eventName,
+				T:         eventVType,
+				V:         v,
+				BlockNum:  rawLog.BlockNumber,
+				BlockHash: rawLog.BlockHash[:],
+				TxIndex:   uint64(rawLog.TxIndex),
+				TxHash:    rawLog.TxHash[:],
+			}
+		}
+		// can not be parsed to any event type
+		if evt == nil {
+			log.Printf("[ERROR]unexpected event log topic,topic hex:%v, err:%v\n", rawLog.Topics[0].String(), err)
+			return nil, err
 		}
 
-		evt := &chain.ContractEvent{
-			Addr:      addr,
-			Name:      eventName,
-			T:         eventVType,
-			V:         v,
-			BlockNum:  rawLog.BlockNumber,
-			BlockHash: rawLog.BlockHash[:],
-			TxIndex:   uint64(rawLog.TxIndex),
-			TxHash:    rawLog.TxHash[:],
-		}
 		events = append(events, evt)
 	}
 
